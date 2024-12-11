@@ -1,32 +1,33 @@
 -- Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
+-- Remotes
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
 -- Variables
-local recordedActions = {}
 local isRecording = false
+local recordedActions = {}
 local recordStartTime = 0
 
--- Function to start recording
+-- Functions to Control Recording
 local function startRecording()
     isRecording = true
     recordStartTime = tick()
     recordedActions = {}
-    print("Recording started...")
+    print("Recording started!")
 end
 
--- Function to stop recording
 local function stopRecording()
     isRecording = false
-    print("Recording stopped. Recorded actions:")
+    print("Recording stopped! Recorded actions:")
     for i, action in ipairs(recordedActions) do
         print(i, action.remote.Name, action.args)
     end
 end
 
--- Function to replay recorded actions
+-- Function to Replay Actions
 local function replayActions()
     if #recordedActions == 0 then
         print("No actions recorded to replay.")
@@ -36,57 +37,37 @@ local function replayActions()
     print("Replaying actions...")
     for _, action in ipairs(recordedActions) do
         task.wait(action.time)
-        if action.remote:IsA("RemoteEvent") then
-            action.remote:FireServer(unpack(action.args))
-        elseif action.remote:IsA("RemoteFunction") then
-            action.remote:InvokeServer(unpack(action.args))
-        end
+        action.remote:FireServer(unpack(action.args))
         print("Replayed action:", action.remote.Name, action.args)
     end
     print("Finished replaying actions.")
 end
 
--- Spy function to monitor remotes and record if enabled
-local function spyOnRemote(remote)
-    if remote:IsA("RemoteEvent") then
-        local originalFireServer = remote.FireServer
-        remote.FireServer = function(self, ...)
-            local args = {...}
-            if isRecording then
-                local timeElapsed = tick() - recordStartTime
-                table.insert(recordedActions, {
-                    remote = self,
-                    args = args,
-                    time = timeElapsed,
-                })
-                print("Recorded action:", self.Name, args, "at", timeElapsed, "seconds")
-            end
-            return originalFireServer(self, ...)
+-- Function to Hook into Remotes for Recording
+local function spyOnRemote(remote, name)
+    local originalFireServer = remote.FireServer
+    remote.FireServer = function(self, ...)
+        local args = {...}
+        if isRecording then
+            local timeElapsed = tick() - recordStartTime
+            table.insert(recordedActions, {
+                remote = self,
+                name = name,
+                args = args,
+                time = timeElapsed,
+            })
+            print("Recorded action:", name, args, "at", timeElapsed, "seconds")
         end
-    elseif remote:IsA("RemoteFunction") then
-        local originalInvokeServer = remote.InvokeServer
-        remote.InvokeServer = function(self, ...)
-            local args = {...}
-            if isRecording then
-                local timeElapsed = tick() - recordStartTime
-                table.insert(recordedActions, {
-                    remote = self,
-                    args = args,
-                    time = timeElapsed,
-                })
-                print("Recorded action:", self.Name, args, "at", timeElapsed, "seconds")
-            end
-            return originalInvokeServer(self, ...)
-        end
+        return originalFireServer(self, ...)
     end
 end
 
--- Attach spy to remotes
-for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
-    if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-        spyOnRemote(remote)
-    end
-end
+-- Attach Spies to Remotes
+spyOnRemote(Remotes.VoteRestart, "VoteRestart")
+spyOnRemote(Remotes.SkipVote, "SkipVote")
+spyOnRemote(Remotes.SetSpeedUp, "SetSpeedUp")
+spyOnRemote(Remotes.SpawnTowerServer, "SpawnTowerServer")
+spyOnRemote(Remotes.VoteDifficulty, "VoteDifficulty")
 
 -- UI Creation
 local function createUI()
@@ -130,7 +111,7 @@ local function createUI()
     return RecordButton, ReplayButton
 end
 
--- Create and connect the UI
+-- Create and Connect the UI
 local RecordButton, ReplayButton = createUI()
 
 -- Connect Record Button
