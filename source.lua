@@ -3,71 +3,29 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Remotes
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+-- Ensure the "Remotes" folder exists
+local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+if not Remotes then
+    warn("Remotes folder not found in ReplicatedStorage!")
+    return
+end
+
+-- Validate individual remotes
+local VoteRestart = Remotes:FindFirstChild("VoteRestart")
+local SkipVote = Remotes:FindFirstChild("SkipVote")
+local SetSpeedUp = Remotes:FindFirstChild("SetSpeedUp")
+local SpawnTowerServer = Remotes:FindFirstChild("SpawnTowerServer")
+local VoteDifficulty = Remotes:FindFirstChild("VoteDifficulty")
+
+if not VoteRestart then warn("VoteRestart remote not found!") end
+if not SkipVote then warn("SkipVote remote not found!") end
+if not SetSpeedUp then warn("SetSpeedUp remote not found!") end
+if not SpawnTowerServer then warn("SpawnTowerServer remote not found!") end
+if not VoteDifficulty then warn("VoteDifficulty remote not found!") end
 
 -- Variables
 local isRecording = false
 local recordedActions = {}
-local recordStartTime = 0
-
--- Functions to Control Recording
-local function startRecording()
-    isRecording = true
-    recordStartTime = tick()
-    recordedActions = {}
-    print("Recording started!")
-end
-
-local function stopRecording()
-    isRecording = false
-    print("Recording stopped! Recorded actions:")
-    for i, action in ipairs(recordedActions) do
-        print(i, action.remote.Name, action.args)
-    end
-end
-
--- Function to Replay Actions
-local function replayActions()
-    if #recordedActions == 0 then
-        print("No actions recorded to replay.")
-        return
-    end
-
-    print("Replaying actions...")
-    for _, action in ipairs(recordedActions) do
-        task.wait(action.time)
-        action.remote:FireServer(unpack(action.args))
-        print("Replayed action:", action.remote.Name, action.args)
-    end
-    print("Finished replaying actions.")
-end
-
--- Function to Hook into Remotes for Recording
-local function spyOnRemote(remote, name)
-    local originalFireServer = remote.FireServer
-    remote.FireServer = function(self, ...)
-        local args = {...}
-        if isRecording then
-            local timeElapsed = tick() - recordStartTime
-            table.insert(recordedActions, {
-                remote = self,
-                name = name,
-                args = args,
-                time = timeElapsed,
-            })
-            print("Recorded action:", name, args, "at", timeElapsed, "seconds")
-        end
-        return originalFireServer(self, ...)
-    end
-end
-
--- Attach Spies to Remotes
-spyOnRemote(Remotes.VoteRestart, "VoteRestart")
-spyOnRemote(Remotes.SkipVote, "SkipVote")
-spyOnRemote(Remotes.SetSpeedUp, "SetSpeedUp")
-spyOnRemote(Remotes.SpawnTowerServer, "SpawnTowerServer")
-spyOnRemote(Remotes.VoteDifficulty, "VoteDifficulty")
 
 -- UI Creation
 local function createUI()
@@ -76,7 +34,7 @@ local function createUI()
     local RecordButton = Instance.new("TextButton")
     local ReplayButton = Instance.new("TextButton")
 
-    -- ScreenGui Properties
+    -- Parent UI to PlayerGui
     ScreenGui.Name = "ActionRecorderUI"
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -111,23 +69,74 @@ local function createUI()
     return RecordButton, ReplayButton
 end
 
--- Create and Connect the UI
+-- Create UI
 local RecordButton, ReplayButton = createUI()
 
--- Connect Record Button
-RecordButton.MouseButton1Click:Connect(function()
+-- Recording System
+local function startRecording()
+    isRecording = true
+    recordedActions = {}
+    print("Recording started!")
+end
+
+local function stopRecording()
+    isRecording = false
+    print("Recording stopped!")
+    print("Recorded actions:", recordedActions)
+end
+
+-- Action Tracking
+local function trackAction(remote, ...)
     if isRecording then
-        stopRecording()
-        RecordButton.Text = "Start Recording"
-        RecordButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-    else
-        startRecording()
+        table.insert(recordedActions, { remote = remote, args = { ... } })
+        print("Action recorded:", remote, ...)
+    end
+end
+
+-- Replay System
+local function replayActions()
+    print("Replaying actions...")
+    for _, action in ipairs(recordedActions) do
+        local remote = action.remote
+        local args = action.args
+        if remote and typeof(remote) == "Instance" and remote:IsA("RemoteEvent") then
+            remote:FireServer(unpack(args))
+        end
+        wait(1) -- Add a delay between actions to simulate real-time replay
+    end
+    print("Replay finished!")
+end
+
+-- Button Functionality
+RecordButton.MouseButton1Click:Connect(function()
+    if not isRecording then
         RecordButton.Text = "Stop Recording"
         RecordButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        startRecording()
+    else
+        RecordButton.Text = "Start Recording"
+        RecordButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        stopRecording()
     end
 end)
 
--- Connect Replay Button
 ReplayButton.MouseButton1Click:Connect(function()
-    replayActions()
+    if not isRecording and #recordedActions > 0 then
+        replayActions()
+    else
+        print("No actions to replay or currently recording!")
+    end
 end)
+
+-- Remote Tracking Example (You can add more remotes as needed)
+if VoteRestart then
+    VoteRestart.OnClientEvent:Connect(function(...)
+        trackAction(VoteRestart, ...)
+    end)
+end
+
+if SkipVote then
+    SkipVote.OnClientEvent:Connect(function(...)
+        trackAction(SkipVote, ...)
+    end)
+end
