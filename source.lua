@@ -1,129 +1,141 @@
+-- Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
--- Action Recorder Variables
-local recording = false
+-- Variables
 local recordedActions = {}
+local isRecording = false
+local recordStartTime = 0
 
--- Recording UI (basic for demonstration)
-local function createUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    local MainFrame = Instance.new("Frame")
-    local RecordButton = Instance.new("TextButton")
-    local PlayButton = Instance.new("TextButton")
-
-    ScreenGui.Name = "ActionRecorderUI"
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 200, 0, 100)
-    MainFrame.Position = UDim2.new(0.5, -100, 0.8, -50)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    MainFrame.Parent = ScreenGui
-
-    RecordButton.Name = "RecordButton"
-    RecordButton.Size = UDim2.new(0, 180, 0, 40)
-    RecordButton.Position = UDim2.new(0, 10, 0, 10)
-    RecordButton.Text = "Start Recording"
-    RecordButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-    RecordButton.Parent = MainFrame
-
-    PlayButton.Name = "PlayButton"
-    PlayButton.Size = UDim2.new(0, 180, 0, 40)
-    PlayButton.Position = UDim2.new(0, 10, 0, 50)
-    PlayButton.Text = "Play Actions"
-    PlayButton.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
-    PlayButton.Parent = MainFrame
-
-    return RecordButton, PlayButton
-end
-
--- Function to start recording actions
+-- Function to start recording
 local function startRecording()
-    recording = true
-    recordedActions = {} -- Reset previous actions
+    isRecording = true
+    recordStartTime = tick()
+    recordedActions = {}
     print("Recording started...")
 end
 
--- Function to stop recording actions
+-- Function to stop recording
 local function stopRecording()
-    recording = false
-    print("Recording stopped. Recorded actions:", recordedActions)
+    isRecording = false
+    print("Recording stopped. Recorded actions:")
+    for i, action in ipairs(recordedActions) do
+        print(i, action.remote.Name, action.args)
+    end
 end
 
--- Function to play back recorded actions
-local function playRecordedActions()
+-- Function to replay recorded actions
+local function replayActions()
     if #recordedActions == 0 then
-        print("No actions recorded to play.")
+        print("No actions recorded to replay.")
         return
     end
 
-    print("Playing recorded actions...")
+    print("Replaying actions...")
     for _, action in ipairs(recordedActions) do
-        task.wait(action.delay) -- Wait for the delay between actions
-        local remote = action.remote
-        local args = action.args
-
-        if remote and remote:IsA("RemoteEvent") then
-            remote:FireServer(unpack(args))
-        elseif remote and remote:IsA("RemoteFunction") then
-            remote:InvokeServer(unpack(args))
+        task.wait(action.time)
+        if action.remote:IsA("RemoteEvent") then
+            action.remote:FireServer(unpack(action.args))
+        elseif action.remote:IsA("RemoteFunction") then
+            action.remote:InvokeServer(unpack(action.args))
         end
-
-        print("Replayed action:", remote.Name, args)
+        print("Replayed action:", action.remote.Name, action.args)
     end
-    print("Finished playing actions.")
+    print("Finished replaying actions.")
 end
 
--- Spy function to monitor and record remotes
+-- Spy function to monitor remotes and record if enabled
 local function spyOnRemote(remote)
     if remote:IsA("RemoteEvent") then
         local originalFireServer = remote.FireServer
         remote.FireServer = function(self, ...)
             local args = {...}
-            if recording then
+            if isRecording then
+                local timeElapsed = tick() - recordStartTime
                 table.insert(recordedActions, {
                     remote = self,
                     args = args,
-                    delay = tick() - (recordedActions[#recordedActions] and recordedActions[#recordedActions].time or tick()),
-                    time = tick()
+                    time = timeElapsed,
                 })
+                print("Recorded action:", self.Name, args, "at", timeElapsed, "seconds")
             end
-            print("Spied RemoteEvent:", self.Name, args)
             return originalFireServer(self, ...)
         end
     elseif remote:IsA("RemoteFunction") then
         local originalInvokeServer = remote.InvokeServer
         remote.InvokeServer = function(self, ...)
             local args = {...}
-            if recording then
+            if isRecording then
+                local timeElapsed = tick() - recordStartTime
                 table.insert(recordedActions, {
                     remote = self,
                     args = args,
-                    delay = tick() - (recordedActions[#recordedActions] and recordedActions[#recordedActions].time or tick()),
-                    time = tick()
+                    time = timeElapsed,
                 })
+                print("Recorded action:", self.Name, args, "at", timeElapsed, "seconds")
             end
-            print("Spied RemoteFunction:", self.Name, args)
             return originalInvokeServer(self, ...)
         end
     end
 end
 
--- Attach the spy to all remotes in ReplicatedStorage
+-- Attach spy to remotes
 for _, remote in ipairs(ReplicatedStorage:GetDescendants()) do
     if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
         spyOnRemote(remote)
     end
 end
 
--- UI Creation and Button Logic
-local RecordButton, PlayButton = createUI()
+-- UI Creation
+local function createUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    local MainFrame = Instance.new("Frame")
+    local RecordButton = Instance.new("TextButton")
+    local ReplayButton = Instance.new("TextButton")
 
+    -- ScreenGui Properties
+    ScreenGui.Name = "ActionRecorderUI"
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    -- MainFrame Properties
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 200, 0, 100)
+    MainFrame.Position = UDim2.new(0.5, -100, 0.5, -50)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    MainFrame.BackgroundTransparency = 0.2
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    -- RecordButton Properties
+    RecordButton.Name = "RecordButton"
+    RecordButton.Size = UDim2.new(0.8, 0, 0.4, 0)
+    RecordButton.Position = UDim2.new(0.1, 0, 0.1, 0)
+    RecordButton.Text = "Start Recording"
+    RecordButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    RecordButton.TextSize = 16
+    RecordButton.Parent = MainFrame
+
+    -- ReplayButton Properties
+    ReplayButton.Name = "ReplayButton"
+    ReplayButton.Size = UDim2.new(0.8, 0, 0.4, 0)
+    ReplayButton.Position = UDim2.new(0.1, 0, 0.5, 0)
+    ReplayButton.Text = "Replay Actions"
+    ReplayButton.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
+    ReplayButton.TextSize = 16
+    ReplayButton.Parent = MainFrame
+
+    return RecordButton, ReplayButton
+end
+
+-- Create and connect the UI
+local RecordButton, ReplayButton = createUI()
+
+-- Connect Record Button
 RecordButton.MouseButton1Click:Connect(function()
-    if recording then
+    if isRecording then
         stopRecording()
         RecordButton.Text = "Start Recording"
         RecordButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
@@ -134,6 +146,7 @@ RecordButton.MouseButton1Click:Connect(function()
     end
 end)
 
-PlayButton.MouseButton1Click:Connect(function()
-    playRecordedActions()
+-- Connect Replay Button
+ReplayButton.MouseButton1Click:Connect(function()
+    replayActions()
 end)
