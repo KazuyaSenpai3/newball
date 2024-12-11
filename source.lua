@@ -2,6 +2,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
 
 -- Ensure the "Remotes" folder exists
 local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
@@ -26,6 +27,7 @@ if not VoteDifficulty then warn("VoteDifficulty remote not found!") end
 -- Variables
 local isRecording = false
 local recordedActions = {}
+local macroName = ""  -- Macro file name input
 
 -- UI Creation
 local function createUI()
@@ -33,6 +35,8 @@ local function createUI()
     local MainFrame = Instance.new("Frame")
     local RecordButton = Instance.new("TextButton")
     local ReplayButton = Instance.new("TextButton")
+    local NameInput = Instance.new("TextBox")
+    local NotificationLabel = Instance.new("TextLabel")
 
     -- Parent UI to PlayerGui
     ScreenGui.Name = "ActionRecorderUI"
@@ -40,8 +44,8 @@ local function createUI()
 
     -- MainFrame Properties
     MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 200, 0, 100)
-    MainFrame.Position = UDim2.new(0.5, -100, 0.5, -50)
+    MainFrame.Size = UDim2.new(0, 300, 0, 200)
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
     MainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     MainFrame.BackgroundTransparency = 0.2
     MainFrame.Active = true
@@ -50,7 +54,7 @@ local function createUI()
 
     -- RecordButton Properties
     RecordButton.Name = "RecordButton"
-    RecordButton.Size = UDim2.new(0.8, 0, 0.4, 0)
+    RecordButton.Size = UDim2.new(0.8, 0, 0.2, 0)
     RecordButton.Position = UDim2.new(0.1, 0, 0.1, 0)
     RecordButton.Text = "Start Recording"
     RecordButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
@@ -59,30 +63,56 @@ local function createUI()
 
     -- ReplayButton Properties
     ReplayButton.Name = "ReplayButton"
-    ReplayButton.Size = UDim2.new(0.8, 0, 0.4, 0)
-    ReplayButton.Position = UDim2.new(0.1, 0, 0.5, 0)
+    ReplayButton.Size = UDim2.new(0.8, 0, 0.2, 0)
+    ReplayButton.Position = UDim2.new(0.1, 0, 0.4, 0)
     ReplayButton.Text = "Replay Actions"
     ReplayButton.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
     ReplayButton.TextSize = 16
     ReplayButton.Parent = MainFrame
 
-    return RecordButton, ReplayButton
+    -- NameInput Properties (for naming the macro)
+    NameInput.Name = "NameInput"
+    NameInput.Size = UDim2.new(0.8, 0, 0.2, 0)
+    NameInput.Position = UDim2.new(0.1, 0, 0.7, 0)
+    NameInput.PlaceholderText = "Enter Macro Name"
+    NameInput.TextSize = 16
+    NameInput.Parent = MainFrame
+
+    -- Notification Label Properties
+    NotificationLabel.Name = "NotificationLabel"
+    NotificationLabel.Size = UDim2.new(0.8, 0, 0.2, 0)
+    NotificationLabel.Position = UDim2.new(0.1, 0, 0.9, 0)
+    NotificationLabel.Text = ""
+    NotificationLabel.TextSize = 14
+    NotificationLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    NotificationLabel.BackgroundTransparency = 1
+    NotificationLabel.Parent = MainFrame
+
+    return RecordButton, ReplayButton, NameInput, NotificationLabel
 end
 
 -- Create UI
-local RecordButton, ReplayButton = createUI()
+local RecordButton, ReplayButton, NameInput, NotificationLabel = createUI()
 
 -- Recording System
 local function startRecording()
+    if NameInput.Text == "" then
+        NotificationLabel.Text = "Please enter a macro name!"
+        return
+    end
+
+    macroName = NameInput.Text
     isRecording = true
     recordedActions = {}
-    print("Recording started!")
+    print("Recording started for macro:", macroName)
+    NotificationLabel.Text = "Recording started for: " .. macroName
 end
 
 local function stopRecording()
     isRecording = false
     print("Recording stopped!")
     print("Recorded actions:", recordedActions)
+    NotificationLabel.Text = "Recording stopped! Macro saved as: " .. macroName
 end
 
 -- Action Tracking
@@ -90,6 +120,10 @@ local function trackAction(remote, ...)
     if isRecording then
         table.insert(recordedActions, { remote = remote, args = { ... } })
         print("Action recorded:", remote, ...)
+        -- Show notification for recorded action
+        NotificationLabel.Text = "Action recorded: " .. remote.Name
+        wait(2)  -- Wait for 2 seconds before hiding the notification
+        NotificationLabel.Text = ""
     end
 end
 
@@ -140,3 +174,28 @@ if SkipVote then
         trackAction(SkipVote, ...)
     end)
 end
+
+-- Save recorded actions to a file (example, to a file on your server)
+local function saveMacroData()
+    if macroName ~= "" and #recordedActions > 0 then
+        local file = Instance.new("ModuleScript")
+        file.Name = macroName .. "_Macro"
+        file.Source = "return " .. game:GetService("HttpService"):JSONEncode(recordedActions)
+        file.Parent = ReplicatedStorage:WaitForChild("Macros")
+        print("Macro saved as", macroName)
+    end
+end
+
+-- Save macro data when recording stops
+local function saveMacroOnStop()
+    if macroName ~= "" then
+        saveMacroData()
+    end
+end
+
+-- Connect the saving mechanism to stop recording
+RecordButton.MouseButton1Click:Connect(function()
+    if isRecording then
+        saveMacroOnStop()
+    end
+end)
