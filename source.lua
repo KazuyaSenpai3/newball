@@ -9,7 +9,7 @@ local Window = OrionLib:MakeWindow({
     ConfigFolder = "TigerHubConfigs"
 })
 
--- Tabs for Different Features
+-- Tabs for Features
 local MainTab = Window:MakeTab({
     Name = "Main Features",
     Icon = "rbxassetid://4483345998",
@@ -28,78 +28,178 @@ local SettingsTab = Window:MakeTab({
     PremiumOnly = false
 })
 
--- Feature 1: Autoparry System
+-- Variables for Features
+getgenv().AutoParryEnabled = false
+getgenv().ESPEnabled = false
+getgenv().ChamsEnabled = false
+getgenv().AntiKickEnabled = false
+getgenv().SilentAimEnabled = false
+
+-- Player Variables
+local LocalPlayer = game.Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- Functions from Original zo.txt
+
+-- Autoparry Logic
+local function AutoParry()
+    while getgenv().AutoParryEnabled do
+        for _, v in pairs(workspace:GetChildren()) do
+            if v:IsA("Part") and v.Name == "Sword" then
+                firetouchinterest(LocalPlayer.Character.HumanoidRootPart, v, 0)
+                firetouchinterest(LocalPlayer.Character.HumanoidRootPart, v, 1)
+            end
+        end
+        wait(0.1)
+    end
+end
+
+-- ESP Logic
+local function EnableESP()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local highlight = Instance.new("Highlight")
+            highlight.Adornee = player.Character
+            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 0.2
+            highlight.Parent = player.Character
+        end
+    end
+end
+
+local function DisableESP()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player.Character and player.Character:FindFirstChildOfClass("Highlight") then
+            player.Character:FindFirstChildOfClass("Highlight"):Destroy()
+        end
+    end
+end
+
+-- Chams Logic
+local function EnableChams()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Material = Enum.Material.Neon
+                    part.Color = Color3.fromRGB(0, 255, 0)
+                end
+            end
+        end
+    end
+end
+
+local function DisableChams()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Material = Enum.Material.Plastic
+                    part.Color = Color3.fromRGB(255, 255, 255)
+                end
+            end
+        end
+    end
+end
+
+-- Anti-Kick Logic
+local function AntiKick()
+    while getgenv().AntiKickEnabled do
+        local mt = getrawmetatable(game)
+        local oldNamecall = mt.__namecall
+        setreadonly(mt, false)
+        mt.__namecall = newcclosure(function(self, ...)
+            if getnamecallmethod() == "Kick" then
+                return nil
+            end
+            return oldNamecall(self, ...)
+        end)
+        setreadonly(mt, true)
+        wait(0.1)
+    end
+end
+
+-- Silent Aim Logic
+local function EnableSilentAim()
+    local targetPart = "Head"
+    local oldIndex = nil
+
+    oldIndex = hookmetamethod(game, "__index", function(self, index)
+        if index == "Hit" and self.Name == targetPart then
+            return CFrame.new(Mouse.Hit.p)
+        end
+        return oldIndex(self, index)
+    end)
+end
+
+local function DisableSilentAim()
+    -- Logic to clean up Silent Aim hooks
+    print("Silent Aim Disabled")
+end
+
+-- Orion UI Controls
 MainTab:AddToggle({
     Name = "Autoparry",
     Default = false,
     Callback = function(enabled)
         getgenv().AutoParryEnabled = enabled
         if enabled then
-            print("Autoparry Enabled")
-            -- Insert autoparry logic here
-        else
-            print("Autoparry Disabled")
+            AutoParry()
         end
     end
 })
 
--- Feature 2: ESP
 VisualsTab:AddToggle({
     Name = "ESP",
     Default = false,
     Callback = function(enabled)
         getgenv().ESPEnabled = enabled
         if enabled then
-            print("ESP Enabled")
-            -- Insert ESP logic here
+            EnableESP()
         else
-            print("ESP Disabled")
+            DisableESP()
         end
     end
 })
 
--- Feature 3: Chams
 VisualsTab:AddToggle({
     Name = "Chams",
     Default = false,
     Callback = function(enabled)
         getgenv().ChamsEnabled = enabled
         if enabled then
-            print("Chams Enabled")
-            -- Insert chams logic here
+            EnableChams()
         else
-            print("Chams Disabled")
+            DisableChams()
         end
     end
 })
 
--- Feature 4: Weapon-Specific Timing
-MainTab:AddTextbox({
-    Name = "Set Weapon Timing",
-    Default = "Katana",
-    TextDisappear = true,
-    Callback = function(value)
-        print("Set timing for weapon:", value)
-        -- Insert weapon-specific timing logic here
-    end
-})
-
--- Feature 5: Anti-Kick
 SettingsTab:AddToggle({
     Name = "Anti-Kick",
     Default = false,
     Callback = function(enabled)
         getgenv().AntiKickEnabled = enabled
         if enabled then
-            print("Anti-Kick Enabled")
-            -- Insert anti-kick logic here
-        else
-            print("Anti-Kick Disabled")
+            AntiKick()
         end
     end
 })
 
--- Feature 6: Speed Control
+SettingsTab:AddToggle({
+    Name = "Silent Aim",
+    Default = false,
+    Callback = function(enabled)
+        getgenv().SilentAimEnabled = enabled
+        if enabled then
+            EnableSilentAim()
+        else
+            DisableSilentAim()
+        end
+    end
+})
+
 SettingsTab:AddSlider({
     Name = "Walkspeed",
     Min = 16,
@@ -109,12 +209,10 @@ SettingsTab:AddSlider({
     Increment = 1,
     ValueName = "Speed",
     Callback = function(value)
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
-        print("Walkspeed set to", value)
+        LocalPlayer.Character.Humanoid.WalkSpeed = value
     end
 })
 
--- Feature 7: Jump Control
 SettingsTab:AddSlider({
     Name = "Jump Power",
     Min = 50,
@@ -124,8 +222,7 @@ SettingsTab:AddSlider({
     Increment = 1,
     ValueName = "Jump",
     Callback = function(value)
-        game.Players.LocalPlayer.Character.Humanoid.JumpPower = value
-        print("Jump Power set to", value)
+        LocalPlayer.Character.Humanoid.JumpPower = value
     end
 })
 
