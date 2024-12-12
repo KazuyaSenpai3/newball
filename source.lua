@@ -39,7 +39,7 @@ getgenv().SilentAimEnabled = false
 local LocalPlayer = game.Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
--- Functions from Original zo.txt
+-- Functions for Features
 
 -- Autoparry Logic
 local function AutoParry()
@@ -57,7 +57,7 @@ end
 -- ESP Logic
 local function EnableESP()
     for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= LocalPlayer then
+        if player ~= LocalPlayer and player.Character then
             local highlight = Instance.new("Highlight")
             highlight.Adornee = player.Character
             highlight.FillColor = Color3.fromRGB(255, 0, 0)
@@ -79,7 +79,7 @@ end
 -- Chams Logic
 local function EnableChams()
     for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= LocalPlayer then
+        if player ~= LocalPlayer and player.Character then
             for _, part in pairs(player.Character:GetChildren()) do
                 if part:IsA("BasePart") then
                     part.Material = Enum.Material.Neon
@@ -92,7 +92,7 @@ end
 
 local function DisableChams()
     for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= LocalPlayer then
+        if player ~= LocalPlayer and player.Character then
             for _, part in pairs(player.Character:GetChildren()) do
                 if part:IsA("BasePart") then
                     part.Material = Enum.Material.Plastic
@@ -105,19 +105,16 @@ end
 
 -- Anti-Kick Logic
 local function AntiKick()
-    while getgenv().AntiKickEnabled do
-        local mt = getrawmetatable(game)
-        local oldNamecall = mt.__namecall
-        setreadonly(mt, false)
-        mt.__namecall = newcclosure(function(self, ...)
-            if getnamecallmethod() == "Kick" then
-                return nil
-            end
-            return oldNamecall(self, ...)
-        end)
-        setreadonly(mt, true)
-        wait(0.1)
-    end
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    setreadonly(mt, false)
+    mt.__namecall = newcclosure(function(self, ...)
+        if getnamecallmethod() == "Kick" then
+            return nil
+        end
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(mt, true)
 end
 
 -- Silent Aim Logic
@@ -134,11 +131,13 @@ local function EnableSilentAim()
 end
 
 local function DisableSilentAim()
-    -- Logic to clean up Silent Aim hooks
+    -- Cleanup for Silent Aim
     print("Silent Aim Disabled")
 end
 
 -- Orion UI Controls
+
+-- Main Features
 MainTab:AddToggle({
     Name = "Autoparry",
     Default = false,
@@ -150,6 +149,7 @@ MainTab:AddToggle({
     end
 })
 
+-- Visual Features
 VisualsTab:AddToggle({
     Name = "ESP",
     Default = false,
@@ -176,6 +176,7 @@ VisualsTab:AddToggle({
     end
 })
 
+-- Settings Features
 SettingsTab:AddToggle({
     Name = "Anti-Kick",
     Default = false,
