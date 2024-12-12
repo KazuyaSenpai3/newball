@@ -1,336 +1,201 @@
--- Load the Orion Library
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+-- Load the Rayfield Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Key System
-local key = "AuzaHubKey123" -- Replace this with your desired key
-local keyEntered = false
+-- Create the main window
+local Window = Rayfield:CreateWindow({
+    Name = "AdvanceTech | Arsenal | v1.7",
+    LoadingTitle = "AdvanceTech Hub",
+    LoadingSubtitle = "Powered by Rayfield",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "AdvanceTechConfig",
+        FileName = "ArsenalConfig"
+    },
+    KeySystem = false -- Set to true if you want a key system
+})
 
-local function checkKey(input)
-    return input == key
-end
+-- Variables
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
-local function initKeySystem()
-    -- Create Key System Window
-    local keyWindow = OrionLib:MakeWindow({
-        Name = "Auza Hub Key System",
-        HidePremium = false
-    })
+local hitboxEnabled = false
+local hitboxSize = 21
+local hitboxTransparency = 6
+local triggerbotEnabled = false
+local triggerbotDelay = 0.2
+local flyEnabled = false
+local flySpeed = 50
+local infiniteAmmoEnabled = false
+local weaponModules = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage.Weapons:GetChildren()
 
-    -- Variable to store the user's input key
-    local userKey = ""
-
-    -- Add a TextBox for user input
-    keyWindow:MakeTab({
-        Name = "Key System",
-        Icon = "rbxassetid://4483345998"
-    }):AddTextbox({
-        Name = "Enter Key",
-        Default = "",
-        TextDisappear = true,
-        Callback = function(value)
-            userKey = value
-        end
-    }):AddButton({
-        Name = "Submit Key",
-        Callback = function()
-            -- Check if the key is correct
-            if checkKey(userKey) then
-                -- Close the Key System Window
-                keyWindow:Destroy()
-                OrionLib:MakeNotification({
-                    Name = "Access Granted",
-                    Content = "Welcome to Auza Hub!",
-                    Image = "rbxassetid://4483345998",
-                    Time = 5
-                })
-                loadHub() -- Open the main hub after key validation
-            else
-                -- Show a notification if the key is incorrect
-                OrionLib:MakeNotification({
-                    Name = "Access Denied",
-                    Content = "Invalid key. Please try again.",
-                    Image = "rbxassetid://4483345998",
-                    Time = 5
-                })
-            end
-        end
-    })
-end
-
--- Anti-Kick Implementation
-local function preventKick()
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    local old = mt.__namecall
-    mt.__namecall = newcclosure(function(self, ...)
-        if getnamecallmethod() == "Kick" then
-            return nil
-        end
-        return old(self, ...)
-    end)
-end
-
--- ESP Implementation
-local espEnabled = false
-local espColor = Color3.fromRGB(255, 0, 0) -- Default ESP color is red
-
-local function toggleESP(enabled)
-    espEnabled = enabled
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= game.Players.LocalPlayer then
-            local character = player.Character
-            if character then
-                for _, part in ipairs(character:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        if enabled then
-                            local adornment = Instance.new("BoxHandleAdornment")
-                            adornment.Adornee = part
-                            adornment.Size = part.Size
-                            adornment.Color3 = espColor
-                            adornment.Transparency = 0.5
-                            adornment.AlwaysOnTop = true
-                            adornment.ZIndex = 5
-                            adornment.Parent = part
-                        else
-                            for _, adornment in ipairs(part:GetChildren()) do
-                                if adornment:IsA("BoxHandleAdornment") then
-                                    adornment:Destroy()
-                                end
-                            end
-                        end
-                    end
+-- Functions
+local function updateHitboxes()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            for _, partName in ipairs({"UpperTorso", "Head", "HumanoidRootPart"}) do
+                local part = player.Character:FindFirstChild(partName)
+                if part and part:IsA("BasePart") then
+                    part.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                    part.Transparency = hitboxTransparency / 10
+                    part.CanCollide = false
                 end
             end
         end
     end
 end
 
--- Main Hub Functionality
-local function loadHub()
-    -- Create the main window
-    local Window = OrionLib:MakeWindow({
-        Name = "Auza Hub | Arsenal | v1.7",
-        HidePremium = false,
-        SaveConfig = true,
-        ConfigFolder = "AuzaHubConfig"
-    })
-
-    -- Variables
-    local flySettings = { fly = false, flyspeed = 50 }
-    local hitboxEnabled = false
-    local noCollisionEnabled = false
-    local hitboxSize = 21
-    local hitboxTransparency = 6
-    local teamCheck = "FFA"
-    local triggerbotEnabled = false
-    local triggerbotDelay = 0.2
-    local triggerbotTeamCheck = "Team-Based"
-    local originalValues = {
-        FireRate = {},
-        ReloadTime = {},
-        Auto = {},
-        Spread = {},
-        Recoil = {}
-    }
-
-    local defaultBodyParts = {"UpperTorso", "Head", "HumanoidRootPart"}
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-
-    -- Main Tab
-    local MainTab = Window:MakeTab({
-        Name = "Main",
-        Icon = "rbxassetid://4483345998",
-        PremiumOnly = false
-    })
-
-    -- Welcome Section
-    MainTab:AddLabel("Welcome To Auza Hub | " .. LocalPlayer.Name)
-
-    -- Hitbox Section
-    local HitboxSection = MainTab:AddSection({ Name = "Hitbox Settings" })
-
-    HitboxSection:AddButton({
-        Name = "[CLICK THIS FIRST] Enable Hitbox",
-        Callback = function()
-            coroutine.wrap(function()
-                while true do
-                    if hitboxEnabled then
-                        updateHitboxes()
-                    end
-                    task.wait(0.1)
-                end
-            end)()
-        end
-    })
-
-    HitboxSection:AddToggle({
-        Name = "Enable Hitbox",
-        Default = false,
-        Callback = function(enabled)
-            hitboxEnabled = enabled
-            if not enabled then
-                for _, player in ipairs(Players:GetPlayers()) do
-                    restoredPart(player)
-                end
-            else
-                updateHitboxes()
-            end
-        end
-    })
-
-    HitboxSection:AddSlider({
-        Name = "Hitbox Size",
-        Min = 1,
-        Max = 25,
-        Default = hitboxSize,
-        Callback = function(value)
-            hitboxSize = value
-            if hitboxEnabled then
-                updateHitboxes()
-            end
-        end
-    })
-
-    HitboxSection:AddSlider({
-        Name = "Hitbox Transparency",
-        Min = 1,
-        Max = 10,
-        Default = hitboxTransparency,
-        Callback = function(value)
-            hitboxTransparency = value
-            if hitboxEnabled then
-                updateHitboxes()
-            end
-        end
-    })
-
-    HitboxSection:AddDropdown({
-        Name = "Team Check",
-        Default = "FFA",
-        Options = {"FFA", "Team-Based", "Everyone"},
-        Callback = function(value)
-            teamCheck = value
-            if hitboxEnabled then
-                updateHitboxes()
-            end
-        end
-    })
-
-    -- Triggerbot Section
-    local TriggerbotSection = MainTab:AddSection({ Name = "Triggerbot Settings" })
-
-    TriggerbotSection:AddToggle({
-        Name = "Enable Triggerbot",
-        Default = false,
-        Callback = function(state)
-            triggerbotEnabled = state
-        end
-    })
-
-    TriggerbotSection:AddDropdown({
-        Name = "Team Check Mode",
-        Default = "Team-Based",
-        Options = {"FFA", "Team-Based", "Everyone"},
-        Callback = function(selected)
-            triggerbotTeamCheck = selected
-        end
-    })
-
-    TriggerbotSection:AddSlider({
-        Name = "Shot Delay",
-        Min = 1,
-        Max = 10,
-        Default = 2,
-        Callback = function(value)
-            triggerbotDelay = value / 10
-        end
-    })
-
-    -- ESP Section
-    local ESPSection = MainTab:AddSection({ Name = "ESP Features" })
-
-    ESPSection:AddToggle({
-        Name = "Enable ESP",
-        Default = false,
-        Callback = function(state)
-            toggleESP(state)
-        end
-    })
-
-    ESPSection:AddColorpicker({
-        Name = "ESP Color",
-        Default = espColor,
-        Callback = function(color)
-            espColor = color
-            if espEnabled then
-                toggleESP(false)
-                toggleESP(true)
-            end
-        end
-    })
-
-    -- Anti-Kick Section
-    MainTab:AddSection({ Name = "Anti-Kick" })
-        :AddButton({
-            Name = "Enable Anti-Kick",
-            Callback = preventKick
-        })
-
-    -- Gun Mods Tab
-    local GunModsTab = Window:MakeTab({
-        Name = "Gun Mods",
-        Icon = "rbxassetid://4483345998",
-        PremiumOnly = false
-    })
-
-    local GunModsSection = GunModsTab:AddSection({ Name = "Overpowered Gun Features" })
-
-    GunModsSection:AddToggle({
-        Name = "Infinite Ammo",
-        Default = false,
-        Callback = function(state)
-            game:GetService("ReplicatedStorage").wkspc.CurrentCurse.Value = state and "Infinite Ammo" or ""
-        end
-    })
-
-    GunModsSection:AddToggle({
-        Name = "Fast Reload",
-        Default = false,
-        Callback = function(state)
-            for _, v in pairs(game.ReplicatedStorage.Weapons:GetChildren()) do
-                if v:FindFirstChild("ReloadTime") then
-                    originalValues.ReloadTime[v] = v.ReloadTime.Value
-                    v.ReloadTime.Value = state and 0.01 or originalValues.ReloadTime[v]
+local function triggerbot()
+    if triggerbotEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+                local head = player.Character.Head
+                if (head.Position - Workspace.CurrentCamera.CFrame.Position).magnitude < 500 then
+                    mouse1click()
+                    wait(triggerbotDelay)
                 end
             end
         end
-    })
-
-    -- Player Tab
-    local PlayerTab = Window:MakeTab({
-        Name = "Player",
-        Icon = "rbxassetid://4483345998",
-        PremiumOnly = false
-    })
-
-    local PlayerSection = PlayerTab:AddSection({ Name = "Player Features" })
-
-    PlayerSection:AddToggle({
-        Name = "Fly",
-        Default = false,
-        Callback = function(state)
-            if state then
-                startFly()
-            else
-                endFly()
-            end
-        end
-    })
-
-    -- Finish Initialization
-    OrionLib:Init()
+    end
 end
 
--- Run the Key System
-initKeySystem()
+local function infiniteAmmo(state)
+    for _, weapon in ipairs(weaponModules) do
+        if weapon:FindFirstChild("Ammo") then
+            weapon.Ammo.Value = state and math.huge or weapon.Ammo.Value
+        end
+    end
+end
+
+local function toggleFly(state)
+    if state then
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        bodyVelocity.Velocity = Vector3.zero
+        bodyVelocity.Parent = LocalPlayer.Character.HumanoidRootPart
+
+        RunService:BindToRenderStep("FlyMovement", Enum.RenderPriority.Input.Value, function()
+            bodyVelocity.Velocity = LocalPlayer.Character.Humanoid.MoveDirection * flySpeed
+        end)
+    else
+        RunService:UnbindFromRenderStep("FlyMovement")
+        if LocalPlayer.Character:FindFirstChild("BodyVelocity") then
+            LocalPlayer.Character.BodyVelocity:Destroy()
+        end
+    end
+end
+
+-- Main Tab
+local MainTab = Window:CreateTab("Main", 4483345998) -- Icon ID or Lucide Icon Name
+MainTab:CreateLabel("Welcome To AdvanceTech | " .. LocalPlayer.Name)
+
+MainTab:CreateToggle({
+    Name = "Enable Hitbox",
+    CurrentValue = false,
+    Callback = function(state)
+        hitboxEnabled = state
+        if state then
+            updateHitboxes()
+        end
+    end
+})
+
+MainTab:CreateSlider({
+    Name = "Hitbox Size",
+    Range = {1, 25},
+    Increment = 1,
+    CurrentValue = hitboxSize,
+    Callback = function(value)
+        hitboxSize = value
+        if hitboxEnabled then
+            updateHitboxes()
+        end
+    end
+})
+
+MainTab:CreateSlider({
+    Name = "Hitbox Transparency",
+    Range = {1, 10},
+    Increment = 1,
+    CurrentValue = hitboxTransparency,
+    Callback = function(value)
+        hitboxTransparency = value
+        if hitboxEnabled then
+            updateHitboxes()
+        end
+    end
+})
+
+-- Combat Tab
+local CombatTab = Window:CreateTab("Combat", 4483345998)
+CombatTab:CreateToggle({
+    Name = "Enable Triggerbot",
+    CurrentValue = false,
+    Callback = function(state)
+        triggerbotEnabled = state
+        if state then
+            RunService:BindToRenderStep("Triggerbot", Enum.RenderPriority.Camera.Value + 1, triggerbot)
+        else
+            RunService:UnbindFromRenderStep("Triggerbot")
+        end
+    end
+})
+
+CombatTab:CreateSlider({
+    Name = "Triggerbot Delay",
+    Range = {0.1, 1.0},
+    Increment = 0.1,
+    CurrentValue = triggerbotDelay,
+    Callback = function(value)
+        triggerbotDelay = value
+    end
+})
+
+-- Gun Mods Tab
+local GunModsTab = Window:CreateTab("Gun Mods", 4483345998)
+
+GunModsTab:CreateToggle({
+    Name = "Infinite Ammo",
+    CurrentValue = false,
+    Callback = function(state)
+        infiniteAmmo(state)
+    end
+})
+
+GunModsTab:CreateToggle({
+    Name = "Fast Reload",
+    CurrentValue = false,
+    Callback = function(state)
+        for _, weapon in ipairs(weaponModules) do
+            if weapon:FindFirstChild("ReloadTime") then
+                weapon.ReloadTime.Value = state and 0.1 or 1.0
+            end
+        end
+    end
+})
+
+-- Player Tab
+local PlayerTab = Window:CreateTab("Player", 4483345998)
+
+PlayerTab:CreateToggle({
+    Name = "Fly",
+    CurrentValue = false,
+    Callback = function(state)
+        toggleFly(state)
+    end
+})
+
+PlayerTab:CreateSlider({
+    Name = "Fly Speed",
+    Range = {10, 150},
+    Increment = 10,
+    CurrentValue = flySpeed,
+    Callback = function(value)
+        flySpeed = value
+    end
+})
+
+-- Finish Initialization
+Rayfield:LoadConfiguration()
