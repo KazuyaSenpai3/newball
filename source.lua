@@ -28,7 +28,7 @@ local function initKeySystem()
             userKey = value
         end
     }):AddButton({
-        Name = "Submit Key",
+        Name = "Check Key",
         Callback = function()
             if checkKey(userKey) then
                 keyWindow:Destroy() -- Close the Key System window
