@@ -16,7 +16,10 @@ local function initKeySystem()
         HidePremium = false
     })
 
+    -- Variable to store the user's input key
     local userKey = ""
+
+    -- Add a TextBox for user input
     keyWindow:MakeTab({
         Name = "Key System",
         Icon = "rbxassetid://4483345998"
@@ -28,10 +31,12 @@ local function initKeySystem()
             userKey = value
         end
     }):AddButton({
-        Name = "Check Key",
+        Name = "Submit Key",
         Callback = function()
+            -- Check if the key is correct
             if checkKey(userKey) then
-                keyWindow:Destroy() -- Close the Key System window
+                -- Close the Key System Window
+                keyWindow:Destroy()
                 OrionLib:MakeNotification({
                     Name = "Access Granted",
                     Content = "Welcome to Auza Hub!",
@@ -40,9 +45,10 @@ local function initKeySystem()
                 })
                 loadHub() -- Open the main hub after key validation
             else
+                -- Show a notification if the key is incorrect
                 OrionLib:MakeNotification({
                     Name = "Access Denied",
-                    Content = "Invalid key. Try again.",
+                    Content = "Invalid key. Please try again.",
                     Image = "rbxassetid://4483345998",
                     Time = 5
                 })
