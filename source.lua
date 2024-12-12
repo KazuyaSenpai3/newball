@@ -6,32 +6,32 @@ local Window = Rayfield:CreateWindow({
     Name = "Auza Hub | Arsenal | v1.7",
     LoadingTitle = "Auza Hub",
     LoadingSubtitle = "Making Arsenal Easy",
-    Theme = "Ocean", -- Ocean theme for aesthetic UI
+    Theme = "Ocean",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "AuzaHubConfig",
         FileName = "ArsenalConfig"
     },
-    KeySystem = true, -- Key system enabled
+    KeySystem = true,
     KeySettings = {
         Title = "Auza Hub Key System",
         Subtitle = "Enter your key to unlock the hub",
         Note = "Visit our Discord server for the latest keys",
-        FileName = "AuzaHubKey", -- Unique file for key storage
-        SaveKey = true, -- Save the key locally for future use
-        GrabKeyFromSite = false, -- Set to true if fetching keys from a website
-        Key = {"YourKey123", "AnotherKey456"} -- Replace with your valid keys
+        FileName = "AuzaHubKey",
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = {"YourKey123", "AnotherKey456"}
     }
 })
 
--- Variables
+-- Variables and Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
 
+-- Core variables
 local hitboxEnabled = false
 local hitboxSize = 21
 local hitboxTransparency = 6
@@ -39,11 +39,13 @@ local triggerbotEnabled = false
 local triggerbotDelay = 0.2
 local flyEnabled = false
 local flySpeed = 50
-local infiniteAmmoEnabled = false
-local fastReloadEnabled = false
-local lockAimEnabled = false
-local weaponModules = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage.Weapons:GetChildren()
+local espEnabled = false
+local espColor = Color3.new(1, 0, 0) -- Default ESP color (red)
+local espInstances = {}
 
+-- Functions
+
+-- Utility: Get Closest Player
 local function getClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = math.huge
@@ -60,23 +62,71 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
-local function lockAimOnPlayer()
-    local targetPlayer = getClosestPlayer()
-    if targetPlayer then
-        local targetPart = targetPlayer.Character:FindFirstChild("Head") or targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if targetPart then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+-- ESP: Add or Remove ESP for Players
+local function toggleESP(state)
+    espEnabled = state
+
+    -- Remove all ESP instances
+    for _, esp in pairs(espInstances) do
+        if esp then esp:Destroy() end
+    end
+    espInstances = {}
+
+    if espEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local billboard = Instance.new("BillboardGui", player.Character.HumanoidRootPart)
+                billboard.Size = UDim2.new(1, 0, 1, 0)
+                billboard.AlwaysOnTop = true
+
+                local textLabel = Instance.new("TextLabel", billboard)
+                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                textLabel.TextColor3 = espColor
+                textLabel.TextScaled = true
+                textLabel.BackgroundTransparency = 1
+                textLabel.Text = player.Name
+
+                table.insert(espInstances, billboard)
+            end
         end
     end
 end
 
+-- Hitbox Handling
+local function updateHitboxes()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            for _, partName in ipairs({"Head", "HumanoidRootPart"}) do
+                local part = player.Character:FindFirstChild(partName)
+                if part then
+                    part.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                    part.Transparency = hitboxTransparency / 10
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end
+
+-- Fly Handling
+local function toggleFly(state)
+    flyEnabled = state
+    if flyEnabled then
+        RunService.Stepped:Connect(function(_, delta)
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.Velocity = Camera.CFrame.LookVector * flySpeed * delta
+            end
+        end)
+    end
+end
+
+-- Triggerbot
 local function triggerbot()
     if triggerbotEnabled then
         local targetPlayer = getClosestPlayer()
         if targetPlayer then
             local head = targetPlayer.Character:FindFirstChild("Head")
             if head then
-                -- Simulate the firing process
                 mouse1click()
                 wait(triggerbotDelay)
             end
@@ -84,36 +134,9 @@ local function triggerbot()
     end
 end
 
--- Infinite Ammo: Prevent ammo from decreasing
-local function infiniteAmmo(state)
-    infiniteAmmoEnabled = state
-    for _, weapon in ipairs(weaponModules) do
-        if weapon:FindFirstChild("Ammo") then
-            weapon.Ammo:GetPropertyChangedSignal("Value"):Connect(function()
-                if infiniteAmmoEnabled then
-                    -- Prevent ammo from decreasing
-                    weapon.Ammo.Value = math.huge
-                end
-            end)
-        end
-    end
-end
-
--- Fast Reload: Override reload time with a quick reload value
-local function fastReload(state)
-    fastReloadEnabled = state
-    for _, weapon in ipairs(weaponModules) do
-        if weapon:FindFirstChild("ReloadTime") then
-            weapon.ReloadTime.Value = state and 0.1 or weapon.ReloadTime.Value -- Instant reload if enabled
-        end
-    end
-end
-
--- Main Tab
-local MainTab = Window:CreateTab("Main", 4483345998) -- Icon ID or Lucide Icon Name
+-- UI Integration
+local MainTab = Window:CreateTab("Main", 4483345998)
 MainTab:CreateLabel("Welcome to Auza Hub | " .. LocalPlayer.Name)
-
-MainTab:CreateDivider() -- Add a divider for better layout
 
 MainTab:CreateToggle({
     Name = "Enable Hitbox",
@@ -157,7 +180,6 @@ MainTab:CreateSlider({
     end
 })
 
--- Combat Tab
 local CombatTab = Window:CreateTab("Combat", 4483345998)
 CombatTab:CreateToggle({
     Name = "Enable Triggerbot",
@@ -182,44 +204,25 @@ CombatTab:CreateSlider({
     end
 })
 
--- Gun Mods Tab
-local GunModsTab = Window:CreateTab("Gun Mods", 4483345998)
-
-GunModsTab:CreateToggle({
-    Name = "Infinite Ammo",
+local VisualTab = Window:CreateTab("Visuals", 4483345998)
+VisualTab:CreateToggle({
+    Name = "Enable ESP",
     CurrentValue = false,
     Callback = function(state)
-        infiniteAmmo(state)
+        toggleESP(state)
     end
 })
 
-GunModsTab:CreateToggle({
-    Name = "Fast Reload",
-    CurrentValue = false,
-    Callback = function(state)
-        fastReload(state)
+VisualTab:CreateColorPicker({
+    Name = "ESP Color",
+    CurrentColor = espColor,
+    Callback = function(color)
+        espColor = color
+        if espEnabled then toggleESP(true) end
     end
 })
 
--- Lock Aim Tab
-local LockAimTab = Window:CreateTab("Aim", 4483345998)
-
-LockAimTab:CreateToggle({
-    Name = "Lock Aim on Nearest Player",
-    CurrentValue = false,
-    Callback = function(state)
-        lockAimEnabled = state
-        if state then
-            RunService:BindToRenderStep("LockAim", Enum.RenderPriority.Camera.Value + 2, lockAimOnPlayer)
-        else
-            RunService:UnbindFromRenderStep("LockAim")
-        end
-    end
-})
-
--- Player Tab
 local PlayerTab = Window:CreateTab("Player", 4483345998)
-
 PlayerTab:CreateToggle({
     Name = "Fly",
     CurrentValue = false,
@@ -238,5 +241,5 @@ PlayerTab:CreateSlider({
     end
 })
 
--- Finish Initialization
+-- Finish Configuration Loading
 Rayfield:LoadConfiguration()
