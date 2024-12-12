@@ -6,7 +6,7 @@ local Window = Rayfield:CreateWindow({
     Name = "Auza Hub | Arsenal | v1.7",
     LoadingTitle = "Auza Hub",
     LoadingSubtitle = "Making Arsenal Easy",
-    Theme = "Ocean", -- Ocean theme for aesthetic
+    Theme = "Ocean", -- Ocean theme for aesthetic UI
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "AuzaHubConfig",
@@ -30,6 +30,7 @@ local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
 
 local hitboxEnabled = false
 local hitboxSize = 21
@@ -40,84 +41,77 @@ local flyEnabled = false
 local flySpeed = 50
 local infiniteAmmoEnabled = false
 local fastReloadEnabled = false
-local nearestPlayer = nil
-
+local lockAimEnabled = false
 local weaponModules = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage.Weapons:GetChildren()
 
--- Utility Functions
-local function updateHitboxes()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            for _, partName in ipairs({"UpperTorso", "Head", "HumanoidRootPart"}) do
-                local part = player.Character:FindFirstChild(partName)
-                if part and part:IsA("BasePart") then
-                    part.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
-                    part.Transparency = hitboxTransparency / 10
-                    part.CanCollide = false
-                end
-            end
-        end
-    end
-end
-
-local function triggerbot()
-    if triggerbotEnabled then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-                local head = player.Character.Head
-                if (head.Position - Workspace.CurrentCamera.CFrame.Position).magnitude < 500 then
-                    mouse1click()
-                    wait(triggerbotDelay)
-                end
-            end
-        end
-    end
-end
-
-local function infiniteAmmo(state)
-    for _, weapon in ipairs(weaponModules) do
-        if weapon:FindFirstChild("Ammo") then
-            weapon.Ammo.Value = state and math.huge or weapon.Ammo.Value
-        end
-    end
-end
-
-local function fastReload(state)
-    for _, weapon in ipairs(weaponModules) do
-        if weapon:FindFirstChild("ReloadTime") then
-            weapon.ReloadTime.Value = state and 0.1 or weapon.ReloadTime.Value
-        end
-    end
-end
-
-local function aimbot()
+local function getClosestPlayer()
     local closestPlayer = nil
     local shortestDistance = math.huge
 
-    -- Find the nearest player
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-            local distance = (player.Character.Head.Position - Workspace.CurrentCamera.CFrame.Position).Magnitude
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (player.Character.HumanoidRootPart.Position - Camera.CFrame.Position).Magnitude
             if distance < shortestDistance then
                 shortestDistance = distance
                 closestPlayer = player
             end
         end
     end
+    return closestPlayer
+end
 
-    -- Lock aim to nearest player's head
-    if closestPlayer and closestPlayer.Character then
-        local head = closestPlayer.Character.Head
-        local targetCFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position, head.Position)
+local function lockAimOnPlayer()
+    local targetPlayer = getClosestPlayer()
+    if targetPlayer then
+        local targetPart = targetPlayer.Character:FindFirstChild("Head") or targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetPart then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+        end
+    end
+end
 
-        -- Smooth aiming towards the target
-        Workspace.CurrentCamera.CFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position, head.Position) * CFrame.Angles(0, math.rad(45), 0)
+local function triggerbot()
+    if triggerbotEnabled then
+        local targetPlayer = getClosestPlayer()
+        if targetPlayer then
+            local head = targetPlayer.Character:FindFirstChild("Head")
+            if head then
+                -- Simulate the firing process
+                mouse1click()
+                wait(triggerbotDelay)
+            end
+        end
+    end
+end
+
+-- Infinite Ammo: Prevent ammo from decreasing
+local function infiniteAmmo(state)
+    for _, weapon in ipairs(weaponModules) do
+        if weapon:FindFirstChild("Ammo") then
+            weapon.Ammo:GetPropertyChangedSignal("Value"):Connect(function()
+                if state then
+                    -- Prevent ammo from decreasing
+                    weapon.Ammo.Value = math.huge
+                end
+            end)
+        end
+    end
+end
+
+-- Fast Reload: Override reload time with a quick reload value
+local function fastReload(state)
+    for _, weapon in ipairs(weaponModules) do
+        if weapon:FindFirstChild("ReloadTime") then
+            weapon.ReloadTime.Value = state and 0.1 or weapon.ReloadTime.Value -- Instant reload if enabled
+        end
     end
 end
 
 -- Main Tab
-local MainTab = Window:CreateTab("Main", 4483345998)
+local MainTab = Window:CreateTab("Main", 4483345998) -- Icon ID or Lucide Icon Name
 MainTab:CreateLabel("Welcome to Auza Hub | " .. LocalPlayer.Name)
+
+MainTab:CreateDivider() -- Add a divider for better layout
 
 MainTab:CreateToggle({
     Name = "Enable Hitbox",
@@ -126,6 +120,11 @@ MainTab:CreateToggle({
         hitboxEnabled = state
         if state then
             updateHitboxes()
+            Rayfield:Notify({
+                Title = "Hitbox Enabled",
+                Content = "Hitboxes are now active with your set size and transparency.",
+                Duration = 5
+            })
         end
     end
 })
@@ -197,6 +196,22 @@ GunModsTab:CreateToggle({
     CurrentValue = false,
     Callback = function(state)
         fastReload(state)
+    end
+})
+
+-- Lock Aim Tab
+local LockAimTab = Window:CreateTab("Aim", 4483345998)
+
+LockAimTab:CreateToggle({
+    Name = "Lock Aim on Nearest Player",
+    CurrentValue = false,
+    Callback = function(state)
+        lockAimEnabled = state
+        if state then
+            RunService:BindToRenderStep("LockAim", Enum.RenderPriority.Camera.Value + 2, lockAimOnPlayer)
+        else
+            RunService:UnbindFromRenderStep("LockAim")
+        end
     end
 })
 
