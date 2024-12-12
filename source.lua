@@ -1,114 +1,133 @@
--- Tiger Spy (Original Turtle Spy Rebranded)
+-- Load Orion Library
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Orion/main/source"))()
 
-local HttpService = game:GetService("HttpService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local ScreenGui = Instance.new("ScreenGui")
-local RemoteScrollFrame = Instance.new("ScrollingFrame")
-local RemoteButton = Instance.new("TextButton")
-local RemoteName = Instance.new("TextLabel")
-local RemoteIcon = Instance.new("ImageLabel")
+-- Initialize Window
+local Window = OrionLib:MakeWindow({
+    Name = "ZO Exploit | Tiger Hub",
+    HidePremium = false,
+    SaveConfig = true,
+    ConfigFolder = "TigerHubConfigs"
+})
 
-local remotes = {}
-local remoteArgs = {}
-local remoteButtons = {}
-local remoteScripts = {}
-local IgnoreList = {}
-local BlockList = {}
+-- Tabs for Different Features
+local MainTab = Window:MakeTab({
+    Name = "Main Features",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
 
-local buttonOffset = -25
-local scrollSizeOffset = 287
-local connections = {}
+local VisualsTab = Window:MakeTab({
+    Name = "Visuals",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
 
--- Setup for the Tiger Spy UI
-local function setupUI()
-    ScreenGui.Name = "TigerSpyGUI"
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    
-    RemoteScrollFrame.Name = "RemoteScrollFrame"
-    RemoteScrollFrame.Parent = ScreenGui
-    RemoteScrollFrame.Size = UDim2.new(0, 207, 0, 287)
-    RemoteScrollFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-    RemoteScrollFrame.ScrollBarThickness = 8
-    RemoteScrollFrame.CanvasSize = UDim2.new(0, 0, 0, scrollSizeOffset)
-    
-    RemoteButton.Name = "RemoteButton"
-    RemoteButton.Parent = RemoteScrollFrame
-    RemoteButton.Size = UDim2.new(0, 182, 0, 26)
-    RemoteButton.Text = "Remote Button"
-    
-    RemoteName.Name = "RemoteName"
-    RemoteName.Parent = RemoteButton
-    RemoteName.Text = "Remote Event"
-    RemoteName.Position = UDim2.new(0, 5, 0, 0)
-    
-    RemoteIcon.Name = "RemoteIcon"
-    RemoteIcon.Parent = RemoteButton
-    RemoteIcon.Image = "rbxassetid://413369506"
-    RemoteIcon.Position = UDim2.new(0.84, 0, 0.02, 0)
-end
+local SettingsTab = Window:MakeTab({
+    Name = "Settings",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
 
--- Hook remote event and function calls
-local function hookRemote(remote)
-    local function originalFireServer(self, ...)
-        table.insert(remotes, remote)
-        table.insert(remoteArgs, {...})
-        -- Store remote call and args for later use
-        return originalFireServer(self, ...)
-    end
-    
-    remote.FireServer = hookfunction(remote.FireServer, originalFireServer)
-end
-
--- Detect and add remotes
-local function detectRemotes()
-    for _, remote in pairs(ReplicatedStorage.Remotes:GetChildren()) do
-        if remote:IsA("RemoteEvent") then
-            hookRemote(remote)
+-- Feature 1: Autoparry System
+MainTab:AddToggle({
+    Name = "Autoparry",
+    Default = false,
+    Callback = function(enabled)
+        getgenv().AutoParryEnabled = enabled
+        if enabled then
+            print("Autoparry Enabled")
+            -- Insert autoparry logic here
+        else
+            print("Autoparry Disabled")
         end
     end
-end
+})
 
--- Add remote buttons to the UI
-local function addToUI(remote, args)
-    local rButton = RemoteButton:Clone()
-    rButton.Parent = RemoteScrollFrame
-    rButton.Visible = true
-    rButton.Position = UDim2.new(0, 17, 0, buttonOffset)
-    rButton.RemoteName.Text = remote.Name
-    buttonOffset = buttonOffset + 35
-    remoteButtons[#remotes] = rButton
-    remoteArgs[#remotes] = args
-    remoteScripts[#remotes] = (isSynapse() and getcallingscript() or rawget(getfenv(0), "script"))
-end
-
--- Connect the remotes to the list and UI
-local function onRemoteFire(remote, ...)
-    addToUI(remote, {...})
-end
-
--- Set up event listeners for remote actions
-ReplicatedStorage.Remotes.ChildAdded:Connect(function(remote)
-    if remote:IsA("RemoteEvent") then
-        onRemoteFire(remote)
-    end
-end)
-
--- Initialize UI and remotes
-setupUI()
-detectRemotes()
-
--- Make sure the script tracks new remote events that are created
-local function monitorRemote()
-    for _, remote in ipairs(ReplicatedStorage.Remotes:GetChildren()) do
-        if remote:IsA("RemoteEvent") then
-            hookRemote(remote)
+-- Feature 2: ESP
+VisualsTab:AddToggle({
+    Name = "ESP",
+    Default = false,
+    Callback = function(enabled)
+        getgenv().ESPEnabled = enabled
+        if enabled then
+            print("ESP Enabled")
+            -- Insert ESP logic here
+        else
+            print("ESP Disabled")
         end
     end
-end
+})
 
--- Call the monitorRemote function to start tracking new remote events
-monitorRemote()
+-- Feature 3: Chams
+VisualsTab:AddToggle({
+    Name = "Chams",
+    Default = false,
+    Callback = function(enabled)
+        getgenv().ChamsEnabled = enabled
+        if enabled then
+            print("Chams Enabled")
+            -- Insert chams logic here
+        else
+            print("Chams Disabled")
+        end
+    end
+})
 
-print("Tiger Spy is active and monitoring remotes!")
+-- Feature 4: Weapon-Specific Timing
+MainTab:AddTextbox({
+    Name = "Set Weapon Timing",
+    Default = "Katana",
+    TextDisappear = true,
+    Callback = function(value)
+        print("Set timing for weapon:", value)
+        -- Insert weapon-specific timing logic here
+    end
+})
+
+-- Feature 5: Anti-Kick
+SettingsTab:AddToggle({
+    Name = "Anti-Kick",
+    Default = false,
+    Callback = function(enabled)
+        getgenv().AntiKickEnabled = enabled
+        if enabled then
+            print("Anti-Kick Enabled")
+            -- Insert anti-kick logic here
+        else
+            print("Anti-Kick Disabled")
+        end
+    end
+})
+
+-- Feature 6: Speed Control
+SettingsTab:AddSlider({
+    Name = "Walkspeed",
+    Min = 16,
+    Max = 100,
+    Default = 16,
+    Color = Color3.fromRGB(255, 0, 0),
+    Increment = 1,
+    ValueName = "Speed",
+    Callback = function(value)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
+        print("Walkspeed set to", value)
+    end
+})
+
+-- Feature 7: Jump Control
+SettingsTab:AddSlider({
+    Name = "Jump Power",
+    Min = 50,
+    Max = 150,
+    Default = 50,
+    Color = Color3.fromRGB(0, 255, 0),
+    Increment = 1,
+    ValueName = "Jump",
+    Callback = function(value)
+        game.Players.LocalPlayer.Character.Humanoid.JumpPower = value
+        print("Jump Power set to", value)
+    end
+})
+
+-- Initialize Orion Library
+OrionLib:Init()
