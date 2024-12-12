@@ -86,10 +86,11 @@ end
 
 -- Infinite Ammo: Prevent ammo from decreasing
 local function infiniteAmmo(state)
+    infiniteAmmoEnabled = state
     for _, weapon in ipairs(weaponModules) do
         if weapon:FindFirstChild("Ammo") then
             weapon.Ammo:GetPropertyChangedSignal("Value"):Connect(function()
-                if state then
+                if infiniteAmmoEnabled then
                     -- Prevent ammo from decreasing
                     weapon.Ammo.Value = math.huge
                 end
@@ -100,6 +101,7 @@ end
 
 -- Fast Reload: Override reload time with a quick reload value
 local function fastReload(state)
+    fastReloadEnabled = state
     for _, weapon in ipairs(weaponModules) do
         if weapon:FindFirstChild("ReloadTime") then
             weapon.ReloadTime.Value = state and 0.1 or weapon.ReloadTime.Value -- Instant reload if enabled
