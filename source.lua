@@ -3,53 +3,52 @@ local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shl
 
 -- Key System
 local key = "AuzaHubKey123" -- Replace this with your desired key
+local keyEntered = false
+
 local function checkKey(input)
     return input == key
 end
 
 local function initKeySystem()
-    OrionLib:MakeNotification({
-        Name = "Key Required",
-        Content = "Enter the correct key to access the script.",
-        Image = "rbxassetid://4483345998",
-        Time = 10
+    -- Create Key System Window
+    local keyWindow = OrionLib:MakeWindow({
+        Name = "Auza Hub Key System",
+        HidePremium = false
     })
 
     local userKey = ""
-    OrionLib:MakeWindow({
-        Name = "Auza Hub Key System",
-        HidePremium = false
-    }):MakeTab({ Name = "Key System", Icon = "rbxassetid://4483345998" })
-        :AddTextbox({
-            Name = "Enter Key",
-            Default = "",
-            TextDisappear = true,
-            Callback = function(value)
-                userKey = value
+    keyWindow:MakeTab({
+        Name = "Key System",
+        Icon = "rbxassetid://4483345998"
+    }):AddTextbox({
+        Name = "Enter Key",
+        Default = "",
+        TextDisappear = true,
+        Callback = function(value)
+            userKey = value
+        end
+    }):AddButton({
+        Name = "Submit Key",
+        Callback = function()
+            if checkKey(userKey) then
+                keyWindow:Destroy() -- Close the Key System window
+                OrionLib:MakeNotification({
+                    Name = "Access Granted",
+                    Content = "Welcome to Auza Hub!",
+                    Image = "rbxassetid://4483345998",
+                    Time = 5
+                })
+                loadHub() -- Open the main hub after key validation
+            else
+                OrionLib:MakeNotification({
+                    Name = "Access Denied",
+                    Content = "Invalid key. Try again.",
+                    Image = "rbxassetid://4483345998",
+                    Time = 5
+                })
             end
-        })
-        :AddButton({
-            Name = "Submit Key",
-            Callback = function()
-                if checkKey(userKey) then
-                    OrionLib:MakeNotification({
-                        Name = "Access Granted",
-                        Content = "Welcome to Auza Hub!",
-                        Image = "rbxassetid://4483345998",
-                        Time = 5
-                    })
-                    OrionLib:Destroy()
-                    loadHub()
-                else
-                    OrionLib:MakeNotification({
-                        Name = "Access Denied",
-                        Content = "Invalid key. Try again.",
-                        Image = "rbxassetid://4483345998",
-                        Time = 5
-                    })
-                end
-            end
-        })
+        end
+    })
 end
 
 -- Anti-Kick Implementation
