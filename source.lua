@@ -3,15 +3,25 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- Create the main window
 local Window = Rayfield:CreateWindow({
-    Name = "AdvanceTech | Arsenal | v1.7",
-    LoadingTitle = "AdvanceTech Hub",
-    LoadingSubtitle = "Powered by Rayfield",
+    Name = "Auza Hub | Arsenal | v1.7",
+    LoadingTitle = "Auza Hub",
+    LoadingSubtitle = "Making Arsenal Easy",
+    Theme = "Ocean", -- Using the Ocean theme for a beautiful aesthetic
     ConfigurationSaving = {
         Enabled = true,
-        FolderName = "AdvanceTechConfig",
+        FolderName = "AuzaHubConfig",
         FileName = "ArsenalConfig"
     },
-    KeySystem = false -- Set to true if you want a key system
+    KeySystem = true, -- Key system enabled
+    KeySettings = {
+        Title = "Auza Hub Key System",
+        Subtitle = "Enter your key to unlock the hub",
+        Note = "Visit our Discord server for the latest keys",
+        FileName = "AuzaHubKey", -- Unique file for key storage
+        SaveKey = true, -- Save the key locally for future use
+        GrabKeyFromSite = false, -- Set to true if fetching keys from a website
+        Key = {"YourKey123", "AnotherKey456"} -- Replace with your valid keys
+    }
 })
 
 -- Variables
@@ -87,9 +97,19 @@ local function toggleFly(state)
     end
 end
 
+-- Notifications for Interaction
+Rayfield:Notify({
+    Title = "Welcome to Auza Hub",
+    Content = "Enjoy dominating Arsenal with the best tools!",
+    Duration = 8,
+    Image = 4483362458 -- Replace with a custom icon ID if needed
+})
+
 -- Main Tab
 local MainTab = Window:CreateTab("Main", 4483345998) -- Icon ID or Lucide Icon Name
-MainTab:CreateLabel("Welcome To AdvanceTech | " .. LocalPlayer.Name)
+MainTab:CreateLabel("Welcome to Auza Hub | " .. LocalPlayer.Name)
+
+MainTab:CreateDivider() -- Add a divider for better layout
 
 MainTab:CreateToggle({
     Name = "Enable Hitbox",
@@ -98,6 +118,11 @@ MainTab:CreateToggle({
         hitboxEnabled = state
         if state then
             updateHitboxes()
+            Rayfield:Notify({
+                Title = "Hitbox Enabled",
+                Content = "Hitboxes are now active with your set size and transparency.",
+                Duration = 5
+            })
         end
     end
 })
