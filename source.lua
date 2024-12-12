@@ -39,24 +39,30 @@ local triggerbotDelay = 0.2
 local flyEnabled = false
 local flySpeed = 50
 local infiniteAmmoEnabled = false
+local fastReloadEnabled = false
 local weaponModules = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage.Weapons:GetChildren()
 
--- Functions
-local function updateHitboxes()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            for _, partName in ipairs({"UpperTorso", "Head", "HumanoidRootPart"}) do
-                local part = player.Character:FindFirstChild(partName)
-                if part and part:IsA("BasePart") then
-                    part.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
-                    part.Transparency = hitboxTransparency / 10
-                    part.CanCollide = false
-                end
-            end
+-- Infinite Ammo Implementation
+local function infiniteAmmo(state)
+    for _, weapon in ipairs(weaponModules) do
+        if weapon:FindFirstChild("Ammo") then
+            -- Setting ammo to a high value so it never depletes
+            weapon.Ammo.Value = state and math.huge or weapon.Ammo.Value
         end
     end
 end
 
+-- Fast Reload Implementation
+local function fastReload(state)
+    for _, weapon in ipairs(weaponModules) do
+        if weapon:FindFirstChild("ReloadTime") then
+            -- Modify ReloadTime for the weapon
+            weapon.ReloadTime.Value = state and 0.1 or weapon.ReloadTime.Value -- Set to 0.1 for instant reload if enabled
+        end
+    end
+end
+
+-- Functions for Triggerbot
 local function triggerbot()
     if triggerbotEnabled then
         for _, player in ipairs(Players:GetPlayers()) do
@@ -70,40 +76,6 @@ local function triggerbot()
         end
     end
 end
-
-local function infiniteAmmo(state)
-    for _, weapon in ipairs(weaponModules) do
-        if weapon:FindFirstChild("Ammo") then
-            weapon.Ammo.Value = state and math.huge or weapon.Ammo.Value
-        end
-    end
-end
-
-local function toggleFly(state)
-    if state then
-        local bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        bodyVelocity.Velocity = Vector3.zero
-        bodyVelocity.Parent = LocalPlayer.Character.HumanoidRootPart
-
-        RunService:BindToRenderStep("FlyMovement", Enum.RenderPriority.Input.Value, function()
-            bodyVelocity.Velocity = LocalPlayer.Character.Humanoid.MoveDirection * flySpeed
-        end)
-    else
-        RunService:UnbindFromRenderStep("FlyMovement")
-        if LocalPlayer.Character:FindFirstChild("BodyVelocity") then
-            LocalPlayer.Character.BodyVelocity:Destroy()
-        end
-    end
-end
-
--- Notifications for Interaction
-Rayfield:Notify({
-    Title = "Welcome to Auza Hub",
-    Content = "Enjoy dominating Arsenal with the best tools!",
-    Duration = 8,
-    Image = 4483362458 -- Replace with a custom icon ID if needed
-})
 
 -- Main Tab
 local MainTab = Window:CreateTab("Main", 4483345998) -- Icon ID or Lucide Icon Name
@@ -193,11 +165,7 @@ GunModsTab:CreateToggle({
     Name = "Fast Reload",
     CurrentValue = false,
     Callback = function(state)
-        for _, weapon in ipairs(weaponModules) do
-            if weapon:FindFirstChild("ReloadTime") then
-                weapon.ReloadTime.Value = state and 0.1 or 1.0
-            end
-        end
+        fastReload(state)
     end
 })
 
