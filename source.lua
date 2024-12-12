@@ -6,10 +6,10 @@
 --[[
 ⣿⠿⠿⠶⠿⢿⣿⣿⣿⣿⣦⣤⣄⢀⡅⢠⣾⣛⡉⠄⠄⠄⠸⢀⣿⠄ ⢀⡋⣡⣴⣶⣶⡀⠄⠄⠙⢿⣿⣿⣿⣿⣿⣴⣿⣿⣿⢃⣤⣄⣀⣥⣿⣿⠄
 ⢸⣇⠻⣿⣿⣿⣧⣀⢀⣠⡌⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠿⠿⣿⣿⣿⠄⢸⣿⣷⣤⣤⣤⣬⣙⣛⢿⣿⣿⣿⣿⣿⣿⡿⣿⣿⡍⠄⠄⢀⣤⣄⠉⠋⣰
-⣖⣿⣿⣿⣿⣿⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⢇⣿⣿⡷⠶⠶⢿⣿⣿⠇⢀⣤ ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣽⣿⣿⣿⡇⣿⣿⣿⣿⣿⣿⣷⣶⣥⣴⣿⡗ 
+⣖⣿⣿⣿⣿⣿⣿⣿⣿⣿⢿⣿⣿⣿⣿⣿⢇⣿⣿⡷⠶⠶⢿⣿⣿⠇⢀⣤ ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣽⣿⣿⣿⡇⣿⣿⣿⣿⣿⣿⣷⣶⣥⣴⣿⡗ 
 ⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠄ ⣦⣌⣛⣻⣿⣿⣧⠙⠛⠛⡭⠅⠒⠦⠭⣭⡻⣿⣿⣿⣿⣿⣿⣿⣿⡿⠃⠄ 
-⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠄⠄⠄⠄⠄⠄⠄⠄⠹⠈⢋⣽⣿⣿⣿⣿⣵⣾⠃⠄ ⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠄⣴⣿⣶⣄⠄⣴⣶⠄⢀⣾⣿⣿⣿⣿⣿⣿⠃⠄⠄ 
-⠈⠻⣿⣿⣿⣿⣿⣿⣿⣿⡄⢻⣿⣿⣿⠄⣿⣿⡀⣾⣿⣿⣿⣿⣛⠛⠁⠄⠄⠄ ⠄⠄⠈⠛⢿⣿⣿⣿⠁⠞⢿⣿⣿⡄⢿⣿⡇⣸⣿⣿⠿⠛⠁⠄⠄⠄⠄⠄
+⣿⣿⣿⣿⣿⣿⣿⡆⠄⠄⠄⠄⠄⠄⠄⠄⠹⠈⢋⣽⣿⣿⣿⣿⣵⣾⠃⠄ ⣿⣿⣿⣿⣿⣿⣿⣿⠄⣴⣿⣶⣄⠄⣴⣶⠄⢀⣾⣿⣿⣿⣿⣿⣿⠃⠄⠄ 
+⠈⠻⣿⣿⣿⣿⣿⣿⡄⢻⣿⣿⣿⠄⣿⣿⡀⣾⣿⣿⣿⣿⣛⠛⠁⠄⠄⠄ ⠄⠄⠈⠛⢿⣿⣿⣿⠁⠞⢿⣿⣿⡄⢿⣿⡇⣸⣿⣿⠿⠛⠁⠄⠄⠄⠄⠄
 ⠄⠄⠄⠄⠄⠉⠻⣿⣿⣾⣦⡙⠻⣷⣾⣿⠃⠿⠋⠁⠄⠄⠄⠄⠄⢀⣠⣴ ⣿⣶⣶⣮⣥⣒⠲⢮⣝⡿⣿⣿⡆⣿⡿⠃⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⣠
 ]]
 
@@ -76,70 +76,6 @@ local hitboxTransparency = 6
 local teamCheck = "FFA" 
 
 local defaultBodyParts = {
-    "UpperTorso",
-    "Head",
-    "HumanoidRootPart"
-}
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-local WarningText = Instance.new("TextLabel", ScreenGui)
--- useless
-WarningText.Size = UDim2.new(0, 200, 0, 50)
-WarningText.TextSize = 16
-WarningText.Position = UDim2.new(0.5, -150, 0, 0)
-WarningText.Text = "" -- made it into empty string, you can add whatever
-WarningText.TextColor3 = Color3.new(1, 0, 0)
-WarningText.BackgroundTransparency = 1
-WarningText.Visible = false
-
--- -------------------------------------
--- Utility Functions
--- -------------------------------------
-local function savedPart(player, part)
-    if not hitbox_original_properties[player] then
-        hitbox_original_properties[player] = {}
-    end
-    if not hitbox_original_properties[player][part.Name] then
-        hitbox_original_properties[player][part.Name] = {
-            CanCollide = part.CanCollide,
-            Transparency = part.Transparency,
-            Size = part.Size
-        }
-    end
-end
-
-local function restoredPart(player)
-    if hitbox_original_properties[player] then
-        for partName, properties in pairs(hitbox_original_properties[player]) do
-            local part = player.Character and player.Character:FindFirstChild(partName)
-            if part and part:IsA("BasePart") then
-                part.CanCollide = properties.CanCollide
-                part.Transparency = properties.Transparency
-                part.Size = properties.Size
-            end
-        end
-    end
-end
-
-local function findClosestPart(player, partName)
-    if not player.Character then return nil end
-    local characterParts = player.Character:GetChildren()
-    for _, part in ipairs(characterParts) do
-        if part:IsA("BasePart") and part.Name:lower():match(partName:lower()) then
-            return part
-        end
-    end
-    return nil
-end
-
--- -------------------------------------
--- Hitbox Functions
--- -------------------------------------
-local function extendHitbox(player)
-    for _, partName in ipairs
-    local defaultBodyParts = {
     "UpperTorso",
     "Head",
     "HumanoidRootPart"
@@ -270,293 +206,258 @@ for _, player in ipairs(Players:GetPlayers()) do
     onPlayerAdded(player)
 end
 
---Orion Lib
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Orion/main/source"))()
-
-local Window = OrionLib:MakeWindow({
-    Name = "AdvanceTech | Arsenal | v1.7",
-    HidePremium = false,
-    SaveConfig = true,
-    ConfigFolder = "AdvanceTechArsenal"
-})
-
-local WelcomeTab = Window:MakeTab({
-    Name = "Main",
-    Icon = "rbxassetid://4483345998", -- Replace with a relevant icon
-    PremiumOnly = false
-})
-
-local GunTab = Window:MakeTab({
-    Name = "Gun Modded",
-    Icon = "rbxassetid://4483345998", -- Replace with a relevant icon
-    PremiumOnly = false
-})
-
-local PlayerTab = Window:MakeTab({
-    Name = "Player",
-    Icon = "rbxassetid://4483345998", -- Replace with a relevant icon
-    PremiumOnly = false
-})
-
-
--- Main Tab (Welcome and Hitbox)
-WelcomeTab:AddLabel("Welcome To AdvanceTech | " .. game.Players.LocalPlayer.Name)
-
-WelcomeTab:AddButton({
-    Name = "[CLICK THIS FIRST] Enable Hitbox",
-    Callback = function()
-        coroutine.wrap(function()
-            while true do
-                if hitboxEnabled then
-                    updateHitboxes()
-                    checkForDeadPlayers()
-                end
-                task.wait(0.1)
+HitboxSection:NewButton("[CLICK THIS FIRST] Enable Hitbox", '?', function()
+    coroutine.wrap(function()
+        while true do
+            if hitboxEnabled then
+                updateHitboxes()
+                checkForDeadPlayers()
             end
-        end)()
-    end
-})
-
-WelcomeTab:AddToggle({
-    Name = "Enable Hitbox",
-    Default = false,
-    Callback = function(enabled)
-        hitboxEnabled = enabled
-        if not enabled then
-            for _, player in ipairs(Players:GetPlayers()) do
-                restoredPart(player)
-            end
-            hitbox_original_properties = {}
-        else
-            updateHitboxes()
+            task.wait(0.1)
         end
-    end
-})
+    end)()
+end)
 
-WelcomeTab:AddSlider({
-    Name = "Hitbox Size",
-    Min = 1,
-    Max = 25,
-    Default = 21,
-    Increment = 1,
-    Callback = function(value)
-        hitboxSize = value
-        if hitboxEnabled then
-            updateHitboxes()
+HitboxSection:NewToggle("Enable Hitbox", '?', function(enabled)
+    hitboxEnabled = enabled
+    if not enabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            restoredPart(player)
         end
+        hitbox_original_properties = {}
+    else
+        updateHitboxes()
     end
-})
+end)
 
-WelcomeTab:AddSlider({
-    Name = "Hitbox Transparency",
-    Min = 0,
-    Max = 10,
-    Default = 6,
-    Increment = 1,
-    Callback = function(value)
-        hitboxTransparency = value
-        if hitboxEnabled then
-            updateHitboxes()
-        end
+HitboxSection:NewSlider("Hitbox Size", '?', 25, 1, function(value)
+    hitboxSize = value
+    if hitboxEnabled then
+        updateHitboxes()
     end
-})
+end)
 
-WelcomeTab:AddDropdown({
-    Name = "Team Check",
-    Default = "FFA",
-    Options = {"FFA", "Team-Based", "Everyone"},
-    Callback = function(value)
-        teamCheck = value
-        if hitboxEnabled then
-            updateHitboxes()
-        end
+HitboxSection:NewSlider("Hitbox Transparency", '?', 10, 1,  function(value)
+    hitboxTransparency = value
+    if hitboxEnabled then
+        updateHitboxes()
     end
-})
+end)
 
-WelcomeTab:AddToggle({
-    Name = "No Collision",
-    Default = false,
-    Callback = function(enabled)
-        noCollisionEnabled = enabled
-        WarningText.Visible = enabled
-        coroutine.wrap(function()
-            while noCollisionEnabled do
-                if hitboxEnabled then
-                    updateHitboxes()
-                end
-                task.wait(0.01)
-            end
+HitboxSection:NewDropdown("Team Check", '?', {"FFA", "Team-Based", "Everyone"}, function(value)
+    teamCheck = value
+    if hitboxEnabled then
+        updateHitboxes()
+    end
+end)
+
+HitboxSection:NewToggle("No Collision", '?', function(enabled)
+    noCollisionEnabled = enabled
+    WarningText.Visible = enabled
+    coroutine.wrap(function()
+        while noCollisionEnabled do
             if hitboxEnabled then
                 updateHitboxes()
             end
-        end)()
-    end
-})
+            task.wait(0.01)
+        end
+        if hitboxEnabled then
+            updateHitboxes()
+        end
+    end)()
+end)
 
--- Triggerbot
-WelcomeTab:AddToggle({
-    Name = "Enable Triggerbot",
-    Default = false,
-    Callback = function(state)
-        getgenv().triggerb = state
-    end
-})
+MainSection:NewToggle("AutoFarm", "?", function(bool)
+    getgenv().AutoFarm = bool
 
-WelcomeTab:AddDropdown({
-    Name = "Team Check Mode (Triggerbot)",
-    Default = "Team-Based",
-    Options = {"FFA", "Team-Based", "Everyone"},
-    Callback = function(selected)
-        teamcheck = selected
-    end
-})
+    local runServiceConnection
+    local mouseDown = false
+    local player = game.Players.LocalPlayer
+    local camera = game.Workspace.CurrentCamera
 
-WelcomeTab:AddSlider({
-    Name = "Shot Delay (Triggerbot)",
-    Min = 1,
-    Max = 10,
-    Default = 2,
-    Increment = 1,
-    Callback = function(value)
-        delay = value / 10
-                end
-    end
-})
+    game:GetService("ReplicatedStorage").wkspc.CurrentCurse.Value = bool and "Infinite Ammo" or ""
 
--- AutoFarm
-WelcomeTab:AddToggle({
-    Name = "AutoFarm",
-    Default = false,
-    Callback = function(bool)
-        getgenv().AutoFarm = bool
+    function closestplayer()
+        local closestDistance = math.huge
+        local closestPlayer = nil
 
-        local runServiceConnection
-        local mouseDown = false
-        local player = game.Players.LocalPlayer
-        local camera = game.Workspace.CurrentCamera
-
-        game:GetService("ReplicatedStorage").wkspc.CurrentCurse.Value = bool and "Infinite Ammo" or ""
-
-        local function closestplayer()
-            local closestDistance = math.huge
-            local closestPlayer = nil
-
-            for _, enemyPlayer in pairs(game.Players:GetPlayers()) do
-                if enemyPlayer ~= player and enemyPlayer.TeamColor ~= player.TeamColor and enemyPlayer.Character then
-                    local character = enemyPlayer.Character
-                    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-                    local humanoid = character:FindFirstChild("Humanoid")
-                    if humanoidRootPart and humanoid and humanoid.Health > 0 then
-                        local distance = (player.Character.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
-                        if distance < closestDistance then
-                            closestDistance = distance
-                            closestPlayer = enemyPlayer
-                        end
+        for _, enemyPlayer in pairs(game.Players:GetPlayers()) do
+            if enemyPlayer ~= player and enemyPlayer.TeamColor ~= player.TeamColor and enemyPlayer.Character then
+                local character = enemyPlayer.Character
+                local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                local humanoid = character:FindFirstChild("Humanoid")
+                if humanoidRootPart and humanoid and humanoid.Health > 0 then
+                    local distance = (player.Character.HumanoidRootPart.Position - humanoidRootPart.Position).Magnitude
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestPlayer = enemyPlayer
                     end
                 end
             end
-
-            return closestPlayer
         end
 
-        local function AutoFarm()
-            game:GetService("ReplicatedStorage").wkspc.TimeScale.Value = 12
+        return closestPlayer
+    end
 
-            runServiceConnection = game:GetService("RunService").Stepped:Connect(function()
-                if getgenv().AutoFarm then
-                    local closestPlayer = closestplayer()
-                    if closestPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        local enemyRootPart = closestPlayer.Character.HumanoidRootPart
+    local function AutoFarm()
+        game:GetService("ReplicatedStorage").wkspc.TimeScale.Value = 12
 
-                        local targetPosition = enemyRootPart.Position - enemyRootPart.CFrame.LookVector * 2 + Vector3.new(0, 2, 0)
-                        player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition)
+        runServiceConnection = game:GetService("RunService").Stepped:Connect(function()
+            if getgenv().AutoFarm then
+                local closestPlayer = closestplayer()
+                if closestPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local enemyRootPart = closestPlayer.Character.HumanoidRootPart
 
-                        if closestPlayer.Character:FindFirstChild("Head") then
-                            local enemyHead = closestPlayer.Character.Head.Position
-                            camera.CFrame = CFrame.new(camera.CFrame.Position, enemyHead)
-                        end
+                    local targetPosition = enemyRootPart.Position - enemyRootPart.CFrame.LookVector * 2 + Vector3.new(0, 2, 0)
+                    player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition)
 
-                        if not mouseDown then
-                            mouse1press()
-                            mouseDown = true
-                        end
-                    else
-                        if mouseDown then
-                            mouse1release()
-                            mouseDown = false
-                        end
+                    if closestPlayer.Character:FindFirstChild("Head") then
+                        local enemyHead = closestPlayer.Character.Head.Position
+                        camera.CFrame = CFrame.new(camera.CFrame.Position, enemyHead)
+                    end
+
+                    if not mouseDown then
+                        mouse1press()
+                        mouseDown = true
                     end
                 else
-                    if runServiceConnection then
-                        runServiceConnection:Disconnect()
-                        runServiceConnection = nil
-                    end
                     if mouseDown then
                         mouse1release()
                         mouseDown = false
                     end
                 end
-            end)
-        end
-
-        local function onCharacterAdded(character)
-            wait(0.5)
-            AutoFarm()
-        end
-
-        player.CharacterAdded:Connect(onCharacterAdded)
-
-        if bool then
-            wait(0.5)
-            AutoFarm()
-        else
-            game:GetService("ReplicatedStorage").wkspc.CurrentCurse.Value = ""
-            getgenv().AutoFarm = false
-            game:GetService("ReplicatedStorage").wkspc.TimeScale.Value = 1
-            if runServiceConnection then
-                runServiceConnection:Disconnect()
-                runServiceConnection = nil
+            else
+                if runServiceConnection then
+                    runServiceConnection:Disconnect()
+                    runServiceConnection = nil
+                end
+                if mouseDown then
+                    mouse1release()
+                    mouseDown = false
+                end
             end
-            if mouseDown then
+        end)
+    end
+
+    local function onCharacterAdded(character)
+        wait(0.5)
+        AutoFarm()
+    end
+
+    player.CharacterAdded:Connect(onCharacterAdded)
+
+    if bool then
+        wait(0.5)
+        AutoFarm()
+    else
+        game:GetService("ReplicatedStorage").wkspc.CurrentCurse.Value = ""
+        getgenv().AutoFarm = false
+        game:GetService("ReplicatedStorage").wkspc.TimeScale.Value = 1
+        if runServiceConnection then
+            runServiceConnection:Disconnect()
+            runServiceConnection = nil
+        end
+        if mouseDown then
+            mouse1release()
+            mouseDown = false
+        end
+    end
+end)
+
+
+getgenv().triggerb = false
+local teamcheck = "Team-Based"
+local delay = 0.2
+local isAlive = true
+
+triggerbot:NewToggle("Enable Triggerbot", "triggerbot on or off", function(state)
+    getgenv().triggerb = state
+end)
+
+triggerbot:NewDropdown("Team Check Mode", "teamchecking mode", {"FFA", "Team-Based", "Everyone"}, function(selected)
+    teamcheck = selected
+end)
+
+triggerbot:NewSlider("Shot Delay", "delay between shots (1-10)", 10, 1, function(value)
+    delay = value / 10
+end)
+
+local function isEnemy(targetPlayer)
+    if teamcheck == "FFA" then
+        return true
+    elseif teamcheck == "Everyone" then
+        return targetPlayer ~= game.Players.LocalPlayer
+    elseif teamcheck == "Team-Based" then
+        local localPlayerTeam = game.Players.LocalPlayer.Team
+        return targetPlayer.Team ~= localPlayerTeam
+    end
+    return false
+end
+
+local function checkhealth()
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+    if humanoid then
+        humanoid.HealthChanged:Connect(function(health)
+            isAlive = health > 0
+        end)
+    end
+end
+
+game.Players.LocalPlayer.CharacterAdded:Connect(checkhealth)
+checkhealth()
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if getgenv().triggerb and isAlive then
+        local player = game.Players.LocalPlayer
+        local mouse = player:GetMouse()
+        local target = mouse.Target
+        if target and target.Parent:FindFirstChild("Humanoid") and target.Parent.Name ~= player.Name then
+            local targetPlayer = game:GetService("Players"):FindFirstChild(target.Parent.Name)
+            if targetPlayer and isEnemy(targetPlayer) then
+                mouse1press()
+                wait(delay)
                 mouse1release()
-                mouseDown = false
             end
         end
     end
-})
+end)
 
 
--- Gun Modded Tab
-GunTab:AddToggle({
-    Name = "Infinite Ammo v1",
-    Default = false,
-    Callback = function(v)
-        game:GetService("ReplicatedStorage").wkspc.CurrentCurse.Value = v and "Infinite Ammo" or ""
-    end
-})
 
-GunTab:AddToggle({
-    Name = "Infinite Ammo v2",
-    Default = false,
-    Callback = function(K)
-        local SettingsInfinite = K
-        if SettingsInfinite then
-            game:GetService("RunService").Stepped:Connect(function()
-                pcall(function()
-                    if SettingsInfinite then
-                        local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
-                        playerGui.GUI.Client.Variables.ammocount.Value = 99
-                        playerGui.GUI.Client.Variables.ammocount2.Value = 99
-                    end
-                end)
+
+
+
+
+
+
+
+local Gun = Window:NewTab("Gun Modded")
+local GunmodsSection = Gun:NewSection("> Overpower Gun <")
+
+GunmodsSection:NewToggle("Infinite Ammo v1", "?", function(v)
+    game:GetService("ReplicatedStorage").wkspc.CurrentCurse.Value = v and "Infinite Ammo" or ""
+end)
+
+local SettingsInfinite = false
+GunmodsSection:NewToggle("Infinite Ammo v2", "?", function(K)
+    SettingsInfinite = K
+    if SettingsInfinite then
+        game:GetService("RunService").Stepped:connect(function()
+            pcall(function()
+                if SettingsInfinite then
+                    local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+                    playerGui.GUI.Client.Variables.ammocount.Value = 99
+                    playerGui.GUI.Client.Variables.ammocount2.Value = 99
+                end
             end)
-        end
+        end)
     end
-})
+end)
 
--- ... (Rest of the Gun Modded toggles - Fast Reload, Fast Fire Rate, etc.)
-
-local originalValues = {
+local originalValues = { -- saves/stores the original Values of the gun value :3
     FireRate = {},
     ReloadTime = {},
     EReloadTime = {},
@@ -565,45 +466,122 @@ local originalValues = {
     Recoil = {}
 }
 
-local function handleWeaponProperty(propertyName, valueName, defaultValue, state)
-    for _, v in pairs(game.ReplicatedStorage.Weapons:GetDescendants()) do
-        if v.Name == valueName then
-            if state then
-                if not originalValues[propertyName][v] then
-                    originalValues[propertyName][v] = v.Value
+GunmodsSection:NewToggle("Fast Reload", "?", function(x)
+    for _, v in pairs(game.ReplicatedStorage.Weapons:GetChildren()) do
+        if v:FindFirstChild("ReloadTime") then
+            if x then
+                if not originalValues.ReloadTime[v] then
+                    originalValues.ReloadTime[v] = v.ReloadTime.Value
                 end
-                v.Value = defaultValue
+                v.ReloadTime.Value = 0.01
             else
-                if originalValues[propertyName][v] then
-                    v.Value = originalValues[propertyName][v]
+                if originalValues.ReloadTime[v] then
+                    v.ReloadTime.Value = originalValues.ReloadTime[v]
                 else
-                    v.Value = defaultValue -- Restore to default if no original value saved
+                    v.ReloadTime.Value = 0.8 
+                end
+            end
+        end
+        if v:FindFirstChild("EReloadTime") then
+            if x then
+                if not originalValues.EReloadTime[v] then
+                    originalValues.EReloadTime[v] = v.EReloadTime.Value
+                end
+                v.EReloadTime.Value = 0.01
+            else
+                if originalValues.EReloadTime[v] then
+                    v.EReloadTime.Value = originalValues.EReloadTime[v]
+                else
+                    v.EReloadTime.Value = 0.8 
                 end
             end
         end
     end
-end
+end)
 
-GunTab:AddToggle({Name = "Fast Reload", Default = false, Callback = function(x) handleWeaponProperty("ReloadTime", "ReloadTime", 0.01, x) handleWeaponProperty("EReloadTime", "EReloadTime", 0.01, x) end})
-GunTab:AddToggle({Name = "Fast Fire Rate", Default = false, Callback = function(state) handleWeaponProperty("FireRate", "FireRate", 0.02, state) handleWeaponProperty("FireRate", "BFireRate", 0.02, state) end})
-GunTab:AddToggle({Name = "Always Auto", Default = false, Callback = function(state) handleWeaponProperty("Auto", "Auto", true, state) handleWeaponProperty("Auto", "AutoFire", true, state) handleWeaponProperty("Auto", "Automatic", true, state) handleWeaponProperty("Auto", "AutoShoot", true, state) handleWeaponProperty("Auto", "AutoGun", true, state) end})
-GunTab:AddToggle({Name = "No Spread", Default = false, Callback = function(state) handleWeaponProperty("Spread", "MaxSpread", 0, state) handleWeaponProperty("Spread", "Spread", 0, state) handleWeaponProperty("Spread", "SpreadControl", 0, state) end})
-GunTab:AddToggle({Name = "No Recoil", Default = false, Callback = function(state) handleWeaponProperty("Recoil", "RecoilControl", 0, state) handleWeaponProperty("Recoil", "Recoil", 0, state) end})
-
-
-
--- Player Tab (Fly)
-PlayerTab:AddToggle({
-    Name = "Fly",
-    Default = false,
-    Callback = function(state)
-        if state then
-            startFly()
-        else
-            endFly()
+GunmodsSection:NewToggle("Fast Fire Rate", "?", function(state)
+    for _, v in pairs(game.ReplicatedStorage.Weapons:GetDescendants()) do
+        if v.Name == "FireRate" or v.Name == "BFireRate" then
+            if state then
+                if not originalValues.FireRate[v] then
+                    originalValues.FireRate[v] = v.Value
+                end
+                v.Value = 0.02
+            else
+                if originalValues.FireRate[v] then
+                    v.Value = originalValues.FireRate[v]
+                else
+                    v.Value = 0.8 
+                end
+            end
         end
     end
-})
+end)
 
-OrionLib:Init()
-    
+GunmodsSection:NewToggle("Always Auto", "?", function(state)
+    for _, v in pairs(game.ReplicatedStorage.Weapons:GetDescendants()) do
+        if v.Name == "Auto" or v.Name == "AutoFire" or v.Name == "Automatic" or v.Name == "AutoShoot" or v.Name == "AutoGun" then
+            if state then
+                if not originalValues.Auto[v] then
+                    originalValues.Auto[v] = v.Value
+                end
+                v.Value = true
+            else
+                if originalValues.Auto[v] then
+                    v.Value = originalValues.Auto[v]
+                else
+                    v.Value = false 
+                end
+            end
+        end
+    end
+end)
+
+GunmodsSection:NewToggle("No Spread", "?", function(state)
+    for _, v in pairs(game:GetService("ReplicatedStorage").Weapons:GetDescendants()) do
+        if v.Name == "MaxSpread" or v.Name == "Spread" or v.Name == "SpreadControl" then
+            if state then
+                if not originalValues.Spread[v] then
+                    originalValues.Spread[v] = v.Value
+                end
+                v.Value = 0
+            else
+                if originalValues.Spread[v] then
+                    v.Value = originalValues.Spread[v]
+                else
+                    v.Value = 1 
+                end
+            end
+        end
+    end
+end)
+
+GunmodsSection:NewToggle("No Recoil", "?", function(state)
+    for _, v in pairs(game:GetService("ReplicatedStorage").Weapons:GetDescendants()) do
+        if v.Name == "RecoilControl" or v.Name == "Recoil" then
+            if state then
+                if not originalValues.Recoil[v] then
+                    originalValues.Recoil[v] = v.Value
+                end
+                v.Value = 0
+            else
+                if originalValues.Recoil[v] then
+                    v.Value = originalValues.Recoil[v]
+                else
+                    v.Value = 1 
+                end
+            end
+        end
+    end
+end)
+
+
+local Player = Window:NewTab("Player")
+local PlayerSection = Player:NewSection("> Fly Hacks <")
+PlayerSection:NewToggle("Fly", "Allows the player to fly", function(state)
+  if state then
+    startFly()
+  else
+    endFly()
+  end
+end)
