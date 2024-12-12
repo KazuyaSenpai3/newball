@@ -6,7 +6,7 @@ local Window = Rayfield:CreateWindow({
     Name = "Auza Hub | Arsenal | v1.7",
     LoadingTitle = "Auza Hub",
     LoadingSubtitle = "Making Arsenal Easy",
-    Theme = "Ocean", -- Using the Ocean theme for a beautiful aesthetic
+    Theme = "Ocean", -- Ocean theme for aesthetic
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "AuzaHubConfig",
@@ -40,29 +40,26 @@ local flyEnabled = false
 local flySpeed = 50
 local infiniteAmmoEnabled = false
 local fastReloadEnabled = false
+local nearestPlayer = nil
+
 local weaponModules = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage.Weapons:GetChildren()
 
--- Infinite Ammo Implementation
-local function infiniteAmmo(state)
-    for _, weapon in ipairs(weaponModules) do
-        if weapon:FindFirstChild("Ammo") then
-            -- Setting ammo to a high value so it never depletes
-            weapon.Ammo.Value = state and math.huge or weapon.Ammo.Value
+-- Utility Functions
+local function updateHitboxes()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            for _, partName in ipairs({"UpperTorso", "Head", "HumanoidRootPart"}) do
+                local part = player.Character:FindFirstChild(partName)
+                if part and part:IsA("BasePart") then
+                    part.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                    part.Transparency = hitboxTransparency / 10
+                    part.CanCollide = false
+                end
+            end
         end
     end
 end
 
--- Fast Reload Implementation
-local function fastReload(state)
-    for _, weapon in ipairs(weaponModules) do
-        if weapon:FindFirstChild("ReloadTime") then
-            -- Modify ReloadTime for the weapon
-            weapon.ReloadTime.Value = state and 0.1 or weapon.ReloadTime.Value -- Set to 0.1 for instant reload if enabled
-        end
-    end
-end
-
--- Functions for Triggerbot
 local function triggerbot()
     if triggerbotEnabled then
         for _, player in ipairs(Players:GetPlayers()) do
@@ -77,11 +74,50 @@ local function triggerbot()
     end
 end
 
--- Main Tab
-local MainTab = Window:CreateTab("Main", 4483345998) -- Icon ID or Lucide Icon Name
-MainTab:CreateLabel("Welcome to Auza Hub | " .. LocalPlayer.Name)
+local function infiniteAmmo(state)
+    for _, weapon in ipairs(weaponModules) do
+        if weapon:FindFirstChild("Ammo") then
+            weapon.Ammo.Value = state and math.huge or weapon.Ammo.Value
+        end
+    end
+end
 
-MainTab:CreateDivider() -- Add a divider for better layout
+local function fastReload(state)
+    for _, weapon in ipairs(weaponModules) do
+        if weapon:FindFirstChild("ReloadTime") then
+            weapon.ReloadTime.Value = state and 0.1 or weapon.ReloadTime.Value
+        end
+    end
+end
+
+local function aimbot()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    -- Find the nearest player
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local distance = (player.Character.Head.Position - Workspace.CurrentCamera.CFrame.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestPlayer = player
+            end
+        end
+    end
+
+    -- Lock aim to nearest player's head
+    if closestPlayer and closestPlayer.Character then
+        local head = closestPlayer.Character.Head
+        local targetCFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position, head.Position)
+
+        -- Smooth aiming towards the target
+        Workspace.CurrentCamera.CFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position, head.Position) * CFrame.Angles(0, math.rad(45), 0)
+    end
+end
+
+-- Main Tab
+local MainTab = Window:CreateTab("Main", 4483345998)
+MainTab:CreateLabel("Welcome to Auza Hub | " .. LocalPlayer.Name)
 
 MainTab:CreateToggle({
     Name = "Enable Hitbox",
@@ -90,11 +126,6 @@ MainTab:CreateToggle({
         hitboxEnabled = state
         if state then
             updateHitboxes()
-            Rayfield:Notify({
-                Title = "Hitbox Enabled",
-                Content = "Hitboxes are now active with your set size and transparency.",
-                Duration = 5
-            })
         end
     end
 })
