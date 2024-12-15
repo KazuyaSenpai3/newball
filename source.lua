@@ -66,17 +66,17 @@ local function rollFlow(flowName)
     end
 end
 
--- Function to equip any flow aura (even if the player doesn't own it)
-local function equipFlowInfinite()
+-- Function to equip the aura/flow even without owning it
+local function equipAura(flowName)
     local player = game.Players.LocalPlayer
     local auraService = game:GetService("ReplicatedStorage").Packages.Knit.Services.FlowService.RE.AuraEquip
 
     -- Attempt to equip the Aura/Flow, even if the player doesn't have it
     pcall(function()
-        auraService:FireServer()  -- Equip the flow aura
+        auraService:FireServer(flowName)  -- Equip the aura/flow by name
         Rayfield:Notify({
-            Title = "Flow Infinite",
-            Content = "A flow aura has been equipped!",
+            Title = "Aura Equipped!",
+            Content = flowName .. " aura/flow has been equipped!",
             Duration = 5,
         })
     end)
@@ -172,13 +172,27 @@ FlowTab:CreateButton({
     end
 })
 
--- Miscellaneous Tab (Renamed from Equip Aura and contains one button for Flow Infinite)
-local MiscTab = Window:CreateTab("Miscellaneous", 4483362458)
+-- Equip Aura Tab (New Tab for Aura Equip)
+local AuraTab = Window:CreateTab("Equip Aura", 4483362458)
 
-MiscTab:CreateButton({
-    Name = "Flow Infinite",
+AuraTab:CreateButton({
+    Name = "Equip Wild Card",
     Callback = function()
-        equipFlowInfinite()  -- Continuously attempts to equip the flow aura
+        equipAura("Wild Card")
+    end
+})
+
+AuraTab:CreateButton({
+    Name = "Equip Demon Wings",
+    Callback = function()
+        equipAura("Demon Wings")
+    end
+})
+
+AuraTab:CreateButton({
+    Name = "Equip Awakened Genius",
+    Callback = function()
+        equipAura("Awakened Genius")
     end
 })
 
