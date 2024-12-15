@@ -66,6 +66,22 @@ local function rollFlow(flowName)
     end
 end
 
+-- Function to equip the aura/flow even without owning it
+local function equipAura(flowName)
+    local player = game.Players.LocalPlayer
+    local auraService = game:GetService("ReplicatedStorage").Packages.Knit.Services.FlowService.RE.AuraEquip
+
+    -- Attempt to equip the Aura/Flow, even if the player doesn't have it
+    pcall(function()
+        auraService:FireServer(flowName)  -- Equip the aura/flow by name
+        Rayfield:Notify({
+            Title = "Aura Equipped!",
+            Content = flowName .. " aura/flow has been equipped!",
+            Duration = 5,
+        })
+    end)
+end
+
 -- Styles Tab
 local StylesTab = Window:CreateTab("Styles", 4483362458)
 
@@ -153,6 +169,30 @@ FlowTab:CreateButton({
     Name = "Awakened Genius",
     Callback = function()
         rollFlow("Awakened Genius")
+    end
+})
+
+-- Equip Aura Tab (New Tab for Aura Equip)
+local AuraTab = Window:CreateTab("Equip Aura", 4483362458)
+
+AuraTab:CreateButton({
+    Name = "Equip Wild Card",
+    Callback = function()
+        equipAura("Wild Card")
+    end
+})
+
+AuraTab:CreateButton({
+    Name = "Equip Demon Wings",
+    Callback = function()
+        equipAura("Demon Wings")
+    end
+})
+
+AuraTab:CreateButton({
+    Name = "Equip Awakened Genius",
+    Callback = function()
+        equipAura("Awakened Genius")
     end
 })
 
