@@ -4,7 +4,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 -- Create Main Window
 local Window = Rayfield:CreateWindow({
     Name = "Ego's Hub",
-    LoadingTitle = "Be The Best Strikr!",
+    LoadingTitle = "Be The Best Strike!",
     LoadingSubtitle = "Powered by Rayfield",
     Theme = "Default",
     ConfigurationSaving = {
