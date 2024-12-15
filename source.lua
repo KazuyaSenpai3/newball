@@ -44,23 +44,30 @@ local function rollStyle(styleName)
     end
 end
 
--- Function to roll for the desired flow without money deduction
+-- Function to roll for the desired flow
 local function rollFlow(flowName)
     local player = game.Players.LocalPlayer
     local flowService = game:GetService("ReplicatedStorage").Packages.Knit.Services.FlowService.RE.Spin
 
-    -- Bypass the money check and directly spin for the flow
     while true do
         task.wait(0.3) -- Slight delay for performance
         if player:FindFirstChild("PlayerStats") and player.PlayerStats:FindFirstChild("Flow") then
-            -- Directly fire the flow spin without money deduction
-            flowService:FireServer()  -- This will perform the spin even if the player has no money
-            Rayfield:Notify({
-                Title = "Spinning for Flow",
-                Content = "Attempting to roll for " .. flowName,
-                Duration = 5,
-            })
-            break  -- Stop the loop once the spin attempt is made
+            if player.PlayerStats.Flow.Value ~= flowName then
+                -- Trigger the flow spin
+                flowService:FireServer()
+                Rayfield:Notify({
+                    Title = "Spinning for Flow",
+                    Content = "Attempting to roll for " .. flowName,
+                    Duration = 5,
+                })
+            else
+                Rayfield:Notify({
+                    Title = "Flow Achieved!",
+                    Content = flowName .. " Flow has been activated!",
+                    Duration = 5,
+                })
+                break -- Stop the loop when the flow is achieved
+            end
         end
     end
 end
