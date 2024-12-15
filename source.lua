@@ -44,38 +44,37 @@ local function rollStyle(styleName)
     end
 end
 
--- Function to roll for the desired flow
+-- Function to roll for the desired flow without money deduction
 local function rollFlow(flowName)
     local player = game.Players.LocalPlayer
     local flowService = game:GetService("ReplicatedStorage").Packages.Knit.Services.FlowService.RE.Spin
 
+    -- Bypass the money check and directly spin for the flow
     while true do
         task.wait(0.3) -- Slight delay for performance
         if player:FindFirstChild("PlayerStats") and player.PlayerStats:FindFirstChild("Flow") then
-            if player.PlayerStats.Flow.Value ~= flowName then
-                flowService:FireServer()
-            else
-                Rayfield:Notify({
-                    Title = "Flow Achieved!",
-                    Content = flowName .. " Flow has been activated!",
-                    Duration = 5,
-                })
-                break -- Stop the loop when the flow is achieved
-            end
+            -- Directly fire the flow spin without money deduction
+            flowService:FireServer()  -- This will perform the spin even if the player has no money
+            Rayfield:Notify({
+                Title = "Spinning for Flow",
+                Content = "Attempting to roll for " .. flowName,
+                Duration = 5,
+            })
+            break  -- Stop the loop once the spin attempt is made
         end
     end
 end
 
 -- Function to equip the aura/flow even without owning it
-local function equipAura(flowName)
+local function equipFlow(flowName)
     local player = game.Players.LocalPlayer
     local auraService = game:GetService("ReplicatedStorage").Packages.Knit.Services.FlowService.RE.AuraEquip
 
     -- Attempt to equip the Aura/Flow, even if the player doesn't have it
     pcall(function()
-        auraService:FireServer(flowName)  -- Equip the aura/flow by name
+        auraService:FireServer(flowName)  -- Equip the flow aura
         Rayfield:Notify({
-            Title = "Aura Equipped!",
+            Title = "Flow Infinite",
             Content = flowName .. " aura/flow has been equipped!",
             Duration = 5,
         })
@@ -172,27 +171,13 @@ FlowTab:CreateButton({
     end
 })
 
--- Equip Aura Tab (New Tab for Aura Equip)
-local AuraTab = Window:CreateTab("Equip Aura", 4483362458)
+-- Miscellaneous Tab (Renamed from Equip Aura and contains one button for Flow Infinite)
+local MiscTab = Window:CreateTab("Miscellaneous", 4483362458)
 
-AuraTab:CreateButton({
-    Name = "Equip Wild Card",
+MiscTab:CreateButton({
+    Name = "Flow Infinite",
     Callback = function()
-        equipAura("Wild Card")
-    end
-})
-
-AuraTab:CreateButton({
-    Name = "Equip Demon Wings",
-    Callback = function()
-        equipAura("Demon Wings")
-    end
-})
-
-AuraTab:CreateButton({
-    Name = "Equip Awakened Genius",
-    Callback = function()
-        equipAura("Awakened Genius")
+        equipFlow("Wild Card")  -- Change to the desired flow name
     end
 })
 
