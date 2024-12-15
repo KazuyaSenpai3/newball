@@ -66,23 +66,20 @@ local function rollFlow(flowName)
     end
 end
 
--- Function to equip any flow aura (even if the player doesn't own it) with a loop
+-- Function to equip any flow aura (even if the player doesn't own it)
 local function equipFlowInfinite()
     local player = game.Players.LocalPlayer
     local auraService = game:GetService("ReplicatedStorage").Packages.Knit.Services.FlowService.RE.AuraEquip
 
-    -- Loop to continuously try equipping the aura until it succeeds
-    while true do
-        task.wait(0.3)  -- Adjust the delay between attempts
-        pcall(function()
-            auraService:FireServer()  -- Equip the flow aura
-            Rayfield:Notify({
-                Title = "Flow Infinite",
-                Content = "A flow aura has been equipped!",
-                Duration = 5,
-            })
-        end)
-    end
+    -- Attempt to equip the Aura/Flow, even if the player doesn't have it
+    pcall(function()
+        auraService:FireServer()  -- Equip the flow aura
+        Rayfield:Notify({
+            Title = "Flow Infinite",
+            Content = "A flow aura has been equipped!",
+            Duration = 5,
+        })
+    end)
 end
 
 -- Styles Tab
@@ -175,7 +172,7 @@ FlowTab:CreateButton({
     end
 })
 
--- Miscellaneous Tab (New Tab for Flow Infinite with a loop)
+-- Miscellaneous Tab (Renamed from Equip Aura and contains one button for Flow Infinite)
 local MiscTab = Window:CreateTab("Miscellaneous", 4483362458)
 
 MiscTab:CreateButton({
