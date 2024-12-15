@@ -1,41 +1,6 @@
 -- Load Rayfield UI Library
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
--- Webhook URL
-local webhookURL = "https://discord.com/api/webhooks/1243441581919567944/-Ng8Qmkj6zJFX0rmWZmGl-8KofHiZ3dUzLDuzxZpeZ4JaSc_2yB3_MGOzXIqkAJ5u-9M"
-
--- Function to send execution data to the webhook
-local function sendToWebhook(userName, userId)
-    local httpService = game:GetService("HttpService")
-    local data = {
-        ["username"] = "Execution Logger",
-        ["embeds"] = {
-            {
-                ["title"] = "Script Executed",
-                ["description"] = "A user has executed the script.",
-                ["color"] = 65280, -- Green color
-                ["fields"] = {
-                    {
-                        ["name"] = "Username",
-                        ["value"] = userName,
-                        ["inline"] = true
-                    },
-                    {
-                        ["name"] = "User ID",
-                        ["value"] = tostring(userId),
-                        ["inline"] = true
-                    }
-                },
-                ["footer"] = {
-                    ["text"] = "Execution Logger - Ego's Hub"
-                }
-            }
-        }
-    }
-    local jsonData = httpService:JSONEncode(data)
-    httpService:PostAsync(webhookURL, jsonData, Enum.HttpContentType.ApplicationJson)
-end
-
 -- Create Main Window
 local Window = Rayfield:CreateWindow({
     Name = "Ego's Hub",
@@ -53,13 +18,9 @@ local Window = Rayfield:CreateWindow({
         FileName = "EgoHubKey", -- Unique file name for key storage
         SaveKey = true, -- Save the key locally for future use
         GrabKeyFromSite = false, -- Set to true if using an online key system
-        Key = {"YourKey123", "AnotherKey456"} -- Replace with your valid keys
+        Key = {"FreeToday", "Tanginamo123"} -- Replace with your valid keys
     }
 })
-
--- Send webhook notification after successful key validation
-local player = game.Players.LocalPlayer
-sendToWebhook(player.Name, player.UserId)
 
 -- Function to roll for the desired style
 local function rollStyle(styleName)
