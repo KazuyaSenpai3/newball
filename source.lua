@@ -22,40 +22,53 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
--- Function to roll for the desired flow without needing money
+-- Function to roll for the desired style
+local function rollStyle(styleName)
+    local player = game.Players.LocalPlayer
+    local styleService = game:GetService("ReplicatedStorage").Packages.Knit.Services.StyleService.RE.Spin
+
+    while true do
+        task.wait(0.3) -- Slight delay for performance
+        if player:FindFirstChild("PlayerStats") and player.PlayerStats:FindFirstChild("Style") then
+            if player.PlayerStats.Style.Value ~= styleName then
+                styleService:FireServer()
+            else
+                Rayfield:Notify({
+                    Title = "Style Achieved!",
+                    Content = styleName .. " Style has been activated!",
+                    Duration = 5,
+                })
+                break -- Stop the loop when the style is achieved
+            end
+        end
+    end
+end
+
+-- Function to roll for the desired flow
 local function rollFlow(flowName)
     local player = game.Players.LocalPlayer
     local flowService = game:GetService("ReplicatedStorage").Packages.Knit.Services.FlowService.RE.Spin
-    local moneyService = game:GetService("ReplicatedStorage").Packages.Knit.Services.LevelService.RE.Money
 
-    -- Get current money value
-    local playerMoney = player.PlayerStats:FindFirstChild("Money")
-    local originalMoney = playerMoney and playerMoney.Value or 0
-
-    -- Set money to a large value temporarily to allow the spin
-    local tempMoney = 1000000 -- You can set this to any large value
-
-    -- Set player's money temporarily
-    if playerMoney then
-        playerMoney.Value = tempMoney
-    end
-
-    -- Wait for a small delay before proceeding with the spin
-    task.wait(0.3)
-
-    -- Trigger the flow spin
-    flowService:FireServer()  -- Perform the spin even without money
-
-    Rayfield:Notify({
-        Title = "Spinning for Flow",
-        Content = "Attempting to roll for " .. flowName,
-        Duration = 5,
-    })
-
-    -- Restore the original money value after the spin
-    task.wait(0.5)
-    if playerMoney then
-        playerMoney.Value = originalMoney
+    while true do
+        task.wait(0.3) -- Slight delay for performance
+        if player:FindFirstChild("PlayerStats") and player.PlayerStats:FindFirstChild("Flow") then
+            if player.PlayerStats.Flow.Value ~= flowName then
+                -- Trigger the flow spin
+                flowService:FireServer()
+                Rayfield:Notify({
+                    Title = "Spinning for Flow",
+                    Content = "Attempting to roll for " .. flowName,
+                    Duration = 5,
+                })
+            else
+                Rayfield:Notify({
+                    Title = "Flow Achieved!",
+                    Content = flowName .. " Flow has been activated!",
+                    Duration = 5,
+                })
+                break -- Stop the loop when the flow is achieved
+            end
+        end
     end
 end
 
