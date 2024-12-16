@@ -7,7 +7,7 @@ local RbxAnalyticsService = game:GetService("RbxAnalyticsService")
 local HWID = RbxAnalyticsService:GetClientId() -- Get unique HWID
 
 -- API endpoint for key validation
-local API_URL = "https://<your-replit-url>/keys/validate" -- Replace with your Flask server URL
+local API_URL = "https://8a9c0997-1eb9-4dea-b102-8f28a8467a4d-00-2gp2h7xsibzsv.sisko.replit.dev/keys/validate" -- Replace with your Flask server URL
 
 -- Create Main Window
 local Window = Rayfield:CreateWindow({
