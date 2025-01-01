@@ -1,12 +1,41 @@
 -- Load Rayfield UI Library
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
--- Define Services and Remote Paths
+-- Create Main Window
+local Window = Rayfield:CreateWindow({
+    Name = "Ego's Hub",
+    Icon = 0, -- No icon in top bar
+    LoadingTitle = "Ego's Hub Loading",
+    LoadingSubtitle = "Powering your game!",
+    Theme = "Default", -- Can be changed to other themes like "DarkBlue", "Ocean", etc.
+    DisableRayfieldPrompts = false, -- Keep Rayfield prompts enabled
+    DisableBuildWarnings = false, -- Disable version mismatch warnings
+
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "EgoHubConfigs", -- Custom folder for config saving
+        FileName = "CombatQuestHub"
+    },
+
+    Discord = {
+        Enabled = false, -- Discord integration disabled
+        Invite = "", -- No Discord invite provided
+        RememberJoins = false -- Doesn't prompt for rejoining Discord
+    },
+
+    KeySystem = false -- Key system is not enabled for this example
+})
+
+-- Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Define Combat Remote
 local CombatRemote = ReplicatedStorage.Remotes.Server.Combat.M1
+
+-- Define Quest Claim Remote
 local ClaimQuestRemote = ReplicatedStorage.Remotes.Server.Data.DeleteSlot.ClaimQuest
 
--- Quest Data Structure (example)
+-- Quest Data
 local questData = {
     ["type"] = "Kill",
     ["set"] = "Yuki Fortress Set",
@@ -28,54 +57,61 @@ local questData = {
 local AutoM1Enabled = false
 local AutoClaimEnabled = false
 
--- Create Main Window
-local Window = Rayfield:CreateWindow({
-    Name = "Rapid M1 & Quest Claim UI",
-    LoadingTitle = "Loading...",
-    LoadingSubtitle = "Initializing...",
-    Theme = "Default",
-    ConfigurationSaving = {
-        Enabled = false
-    }
-})
+-- Tabs
+local CombatTab = Window:CreateTab("Combat", 4483362458) -- Combat tab
+local QuestTab = Window:CreateTab("Quests", 4483362458) -- Quest tab
 
--- Create Tab for M1 Attacks
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-
--- Add Toggle for Auto M1
+-- Rapid M1 Toggle
 CombatTab:CreateToggle({
     Name = "Enable Rapid M1",
     CurrentValue = false,
-    Flag = "AutoM1Toggle",
+    Flag = "AutoM1Toggle", -- Identifier for the toggle
     Callback = function(value)
         AutoM1Enabled = value
         if value then
-            print("Rapid M1 Enabled")
+            Rayfield:Notify({
+                Title = "Rapid M1 Enabled",
+                Content = "Rapid M1 has been activated.",
+                Duration = 5,
+                Type = "Success"
+            })
         else
-            print("Rapid M1 Disabled")
+            Rayfield:Notify({
+                Title = "Rapid M1 Disabled",
+                Content = "Rapid M1 has been deactivated.",
+                Duration = 5,
+                Type = "Info"
+            })
         end
     end
 })
 
--- Create Tab for Quest Claiming
-local QuestTab = Window:CreateTab("Quest Auto Claim", 4483362458)
-
--- Add Toggle for Auto Claim
+-- Auto Claim Quest Toggle
 QuestTab:CreateToggle({
-    Name = "Enable Auto Claim",
+    Name = "Enable Auto Quest Claim",
     CurrentValue = false,
-    Flag = "AutoClaimToggle",
+    Flag = "AutoClaimToggle", -- Identifier for the toggle
     Callback = function(value)
         AutoClaimEnabled = value
         if value then
-            print("Auto Claim Enabled")
+            Rayfield:Notify({
+                Title = "Auto Quest Claim Enabled",
+                Content = "Auto quest claiming has been activated.",
+                Duration = 5,
+                Type = "Success"
+            })
         else
-            print("Auto Claim Disabled")
+            Rayfield:Notify({
+                Title = "Auto Quest Claim Disabled",
+                Content = "Auto quest claiming has been deactivated.",
+                Duration = 5,
+                Type = "Info"
+            })
         end
     end
 })
 
--- Auto Rapid M1 Functionality
+-- Functionality Loops
 task.spawn(function()
     while true do
         task.wait(0.01) -- Rapid M1 delay
@@ -84,34 +120,32 @@ task.spawn(function()
                 CombatRemote:FireServer(1, {})
             end)
             if not success then
-                warn("Failed to execute M1:", response)
+                warn("Error in Rapid M1:", response)
             end
         end
     end
 end)
 
--- Auto Claim Quest Functionality
 task.spawn(function()
     while true do
-        task.wait(5) -- Wait for 5 seconds before the next claim
+        task.wait(5) -- Delay for auto quest claiming
         if AutoClaimEnabled then
             local success, response = pcall(function()
                 return ClaimQuestRemote:InvokeServer(questData)
             end)
 
             if success then
-                print("Quest claimed successfully:", response)
                 Rayfield:Notify({
                     Title = "Quest Claimed",
-                    Content = "Quest claimed successfully!",
+                    Content = "Successfully claimed the quest!",
                     Duration = 5,
                     Type = "Success"
                 })
             else
-                warn("Failed to claim quest:", response)
+                warn("Error in Auto Quest Claim:", response)
                 Rayfield:Notify({
-                    Title = "Error",
-                    Content = "Failed to claim quest.",
+                    Title = "Quest Claim Error",
+                    Content = "Failed to claim the quest.",
                     Duration = 5,
                     Type = "Error"
                 })
@@ -119,3 +153,6 @@ task.spawn(function()
         end
     end
 end)
+
+-- Finalize Rayfield UI
+Rayfield:LoadConfiguration()
