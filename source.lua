@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 -- Create Main Window
 local Window = Rayfield:CreateWindow({
-    Name = "Ego's Hub",
+    Name = "tute's Hub",
     Icon = 0, -- No icon in top bar
     LoadingTitle = "Ego's Hub Loading",
     LoadingSubtitle = "Powering your game!",
