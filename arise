@@ -1,0 +1,500 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- Path to enemies folder
+local ENEMIES_FOLDER = workspace.__Main.__Enemies.Client
+
+-- Settings
+local settings = {
+    isRunning = false,
+    teleportHeight = 3,
+    attackDelay = 0.05, -- Default faster attack speed
+    teleportMethod = "CFrame", -- "CFrame" or "Tween"
+    targetSearchRadius = 100,
+    useSmartTP = true,
+    selectedEnemy = "Nearest", -- "Nearest", "Strongest", "Weakest", "Specific"
+    targetPlayer = nil, -- For player targeting
+    autoArise = true, -- Auto arise after kill
+    lastTarget = nil, -- Track last target for kill detection
+    attackSpeedMultiplier = 5 -- Attack speed bypass multiplier
+}
+
+-- Load Rayfield UI Library
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+-- Create window
+local Window = Rayfield:CreateWindow({
+    Name = "Enemy Teleport Attack",
+    LoadingTitle = "Advanced Combat Script",
+    LoadingSubtitle = "by Rayfield",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "TPAttackConfig",
+        FileName = "Config"
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "",
+        RememberJoins = true
+    },
+    KeySystem = false
+})
+
+-- Utility functions
+local function notify(title, content, duration)
+    Rayfield:Notify({
+        Title = title,
+        Content = content,
+        Duration = duration or 3,
+        Image = 4483362458
+    })
+end
+
+-- Get unique ID for enemy
+local function getEnemyID(enemy)
+    -- This is a placeholder. In your game, the enemy ID might be stored differently
+    -- You might need to check the enemy's properties to find the actual ID
+    if enemy and enemy:IsA("Model") then
+        return enemy:GetAttribute("ID") or enemy.Name
+    end
+    return nil
+end
+
+-- Enemy detection functions
+function findEnemies()
+    local enemies = {}
+    
+    -- Check if the folder exists
+    if ENEMIES_FOLDER then
+        -- Get all children of the enemies folder
+        for _, enemy in pairs(ENEMIES_FOLDER:GetChildren()) do
+            -- Add the enemy to our list if it has the necessary parts
+            if enemy:FindFirstChild("HumanoidRootPart") then
+                table.insert(enemies, enemy)
+            end
+        end
+    else
+        warn("Enemy folder not found!")
+    end
+    
+    return enemies
+end
+
+function findTargetEnemy()
+    -- If targeting a player, prioritize that
+    if settings.selectedEnemy == "Player" and settings.targetPlayer then
+        local targetPlayer = Players:FindFirstChild(settings.targetPlayer)
+        if targetPlayer and targetPlayer.Character and 
+           targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            return targetPlayer.Character
+        end
+    end
+    
+    local enemies = findEnemies()
+    
+    if #enemies == 0 then
+        return nil
+    end
+    
+    -- Different targeting methods
+    if settings.selectedEnemy == "Nearest" then
+        local nearestEnemy = nil
+        local shortestDistance = settings.targetSearchRadius
+        
+        for _, enemy in pairs(enemies) do
+            if enemy:FindFirstChild("HumanoidRootPart") then
+                local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    nearestEnemy = enemy
+                end
+            end
+        end
+        
+        return nearestEnemy
+    elseif settings.selectedEnemy == "Strongest" then
+        -- Assuming health is the measure of strength
+        table.sort(enemies, function(a, b)
+            local aHealth = a:FindFirstChild("Humanoid") and a.Humanoid.Health or 0
+            local bHealth = b:FindFirstChild("Humanoid") and b.Humanoid.Health or 0
+            return aHealth > bHealth
+        end)
+        
+        return enemies[1]
+    elseif settings.selectedEnemy == "Weakest" then
+        table.sort(enemies, function(a, b)
+            local aHealth = a:FindFirstChild("Humanoid") and a.Humanoid.Health or 0
+            local bHealth = b:FindFirstChild("Humanoid") and b.Humanoid.Health or 0
+            return aHealth < bHealth
+        end)
+        
+        return enemies[1]
+    end
+    
+    -- Default to nearest if no valid selection
+    return enemies[1]
+end
+
+-- Teleport functions
+function smartTeleport(targetCFrame)
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    
+    if settings.teleportMethod == "CFrame" then
+        -- Method 1: Direct CFrame but with randomization to avoid detection
+        if settings.useSmartTP then
+            -- Add slight randomization to teleport position
+            local randomOffset = Vector3.new(
+                math.random(-10, 10) / 100,
+                settings.teleportHeight + (math.random(-10, 10) / 100),
+                math.random(-10, 10) / 100
+            )
+            humanoidRootPart.CFrame = targetCFrame * CFrame.new(randomOffset)
+        else
+            -- Standard teleport
+            humanoidRootPart.CFrame = targetCFrame * CFrame.new(0, settings.teleportHeight, 0)
+        end
+    else
+        -- Method 2: Tween Service (smoother motion, may bypass some anti-teleport systems)
+        local tweenInfo = TweenInfo.new(
+            0.2, -- Time
+            Enum.EasingStyle.Linear, -- Style
+            Enum.EasingDirection.Out -- Direction
+        )
+        
+        local targetPosition = targetCFrame * CFrame.new(0, settings.teleportHeight, 0)
+        local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetPosition})
+        tween:Play()
+        wait(0.2) -- Wait for tween to complete
+    end
+end
+
+-- Attack function with the specific remote event
+function performAttack(enemy)
+    -- Get the enemy ID
+    local enemyID = getEnemyID(enemy)
+    
+    if enemyID then
+        -- Use the specific remote event for this game
+        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
+            {
+                ["Event"] = "PunchAttack",
+                ["Enemy"] = enemyID
+            },
+            ""
+        })
+    else
+        -- Fallback to mouse1click if we can't get the enemy ID
+        mouse1click()
+    end
+end
+
+-- Auto arise function (E key 3 times)
+function performArise()
+    for i = 1, 3 do
+        -- Simulate pressing E key
+        keypress(0x45) -- E key
+        wait(0.1)
+        keyrelease(0x45)
+        wait(0.1)
+    end
+end
+
+-- Check if target is dead
+function isTargetDead(target)
+    if not target then return false end
+    
+    -- Check if the target has a Humanoid and if it's dead
+    if target:FindFirstChild("Humanoid") then
+        return target.Humanoid.Health <= 0
+    end
+    
+    -- If there's no Humanoid, check if the target exists in the game
+    return not target:IsDescendantOf(game)
+end
+
+-- Main attack loop
+local attackConnection = nil
+
+function startAttackLoop()
+    if attackConnection then return end
+    
+    notify("Script Activated", "Teleport attack script is now running!", 3)
+    
+    attackConnection = RunService.Heartbeat:Connect(function()
+        if not settings.isRunning then return end
+        
+        local character = LocalPlayer.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+        
+        -- Check if previous target is dead
+        if settings.lastTarget and isTargetDead(settings.lastTarget) then
+            if settings.autoArise then
+                performArise()
+            end
+            settings.lastTarget = nil
+            wait(0.5) -- Brief delay after kill
+        end
+        
+        local enemy = findTargetEnemy()
+        if enemy then
+            -- Update last target
+            settings.lastTarget = enemy
+            
+            smartTeleport(enemy.HumanoidRootPart.CFrame)
+            wait(0.05) -- Smaller delay before attack
+            
+            -- Perform multiple attacks to bypass attack speed limits
+            for i = 1, settings.attackSpeedMultiplier do
+                performAttack(enemy)
+                wait(settings.attackDelay / settings.attackSpeedMultiplier)
+            end
+        else
+            wait(0.2)
+        end
+    end)
+end
+
+function stopAttackLoop()
+    if attackConnection then
+        attackConnection:Disconnect()
+        attackConnection = nil
+        notify("Script Deactivated", "Teleport attack script has been stopped.", 3)
+    end
+end
+
+-- Create UI elements
+local MainTab = Window:CreateTab("Main", 4483362458)
+
+local ToggleButton = MainTab:CreateToggle({
+    Name = "Enable TP Attack",
+    CurrentValue = false,
+    Flag = "TPAttackEnabled",
+    Callback = function(Value)
+        settings.isRunning = Value
+        if Value then
+            startAttackLoop()
+        else
+            stopAttackLoop()
+        end
+    end,
+})
+
+local TeleportMethodDropdown = MainTab:CreateDropdown({
+    Name = "Teleport Method",
+    Options = {"CFrame", "Tween"},
+    CurrentOption = settings.teleportMethod,
+    Flag = "TPMethod",
+    Callback = function(Option)
+        settings.teleportMethod = Option
+        notify("Settings Changed", "Teleport method set to: " .. Option, 2)
+    end,
+})
+
+local SmartTPToggle = MainTab:CreateToggle({
+    Name = "Smart Teleport",
+    CurrentValue = settings.useSmartTP,
+    Flag = "SmartTP",
+    Callback = function(Value)
+        settings.useSmartTP = Value
+    end,
+})
+
+local TargetingDropdown = MainTab:CreateDropdown({
+    Name = "Target Selection",
+    Options = {"Nearest", "Strongest", "Weakest", "Player"},
+    CurrentOption = settings.selectedEnemy,
+    Flag = "TargetSelection",
+    Callback = function(Option)
+        settings.selectedEnemy = Option
+        notify("Settings Changed", "Target selection set to: " .. Option, 2)
+    end,
+})
+
+-- Get player list for targeting
+local playerNames = {}
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        table.insert(playerNames, player.Name)
+    end
+end
+
+local PlayerTargetDropdown = MainTab:CreateDropdown({
+    Name = "Select Player Target",
+    Options = playerNames,
+    CurrentOption = "",
+    Flag = "PlayerTarget",
+    Callback = function(Option)
+        settings.targetPlayer = Option
+        notify("Target Selected", "Now targeting player: " .. Option, 2)
+    end,
+})
+
+-- Refresh player list button
+local RefreshPlayersButton = MainTab:CreateButton({
+    Name = "Refresh Player List",
+    Callback = function()
+        local newPlayerNames = {}
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                table.insert(newPlayerNames, player.Name)
+            end
+        end
+        
+        PlayerTargetDropdown:Refresh(newPlayerNames, true)
+        notify("Players Refreshed", "Player list has been updated.", 2)
+    end,
+})
+
+-- Combat Tab
+local CombatTab = Window:CreateTab("Combat", 4483362458)
+
+local AttackSpeedSlider = CombatTab:CreateSlider({
+    Name = "Attack Speed Multiplier",
+    Range = {1, 10},
+    Increment = 1,
+    Suffix = "x",
+    CurrentValue = settings.attackSpeedMultiplier,
+    Flag = "AttackSpeedMult",
+    Callback = function(Value)
+        settings.attackSpeedMultiplier = Value
+    end,
+})
+
+local AttackDelaySlider = CombatTab:CreateSlider({
+    Name = "Base Attack Delay",
+    Range = {0.01, 0.3},
+    Increment = 0.01,
+    Suffix = "seconds",
+    CurrentValue = settings.attackDelay,
+    Flag = "AttackDelay",
+    Callback = function(Value)
+        settings.attackDelay = Value
+    end,
+})
+
+local AutoAriseToggle = CombatTab:CreateToggle({
+    Name = "Auto Arise After Kill",
+    CurrentValue = settings.autoArise,
+    Flag = "AutoArise",
+    Callback = function(Value)
+        settings.autoArise = Value
+    end,
+})
+
+local ManualAriseButton = CombatTab:CreateButton({
+    Name = "Manually Arise (E x3)",
+    Callback = function()
+        performArise()
+        notify("Manual Action", "Performed arise action.", 2)
+    end,
+})
+
+-- Settings Tab
+local SettingsTab = Window:CreateTab("Settings", 4483362458)
+
+local TPHeightSlider = SettingsTab:CreateSlider({
+    Name = "Teleport Height",
+    Range = {0, 10},
+    Increment = 0.5,
+    Suffix = "studs",
+    CurrentValue = settings.teleportHeight,
+    Flag = "TPHeight",
+    Callback = function(Value)
+        settings.teleportHeight = Value
+    end,
+})
+
+local SearchRadiusSlider = SettingsTab:CreateSlider({
+    Name = "Search Radius",
+    Range = {10, 500},
+    Increment = 10,
+    Suffix = "studs",
+    CurrentValue = settings.targetSearchRadius,
+    Flag = "SearchRadius",
+    Callback = function(Value)
+        settings.targetSearchRadius = Value
+    end,
+})
+
+local KeybindButton = SettingsTab:CreateKeybind({
+    Name = "Toggle Script Keybind",
+    CurrentKeybind = "F",
+    HoldToInteract = false,
+    Flag = "ToggleKeybind",
+    Callback = function()
+        settings.isRunning = not settings.isRunning
+        ToggleButton:Set(settings.isRunning)
+        if settings.isRunning then
+            startAttackLoop()
+        else
+            stopAttackLoop()
+        end
+    end,
+})
+
+local DestroyButton = SettingsTab:CreateButton({
+    Name = "Destroy UI",
+    Callback = function()
+        stopAttackLoop()
+        Rayfield:Destroy()
+    end,
+})
+
+-- Initialize enemy check
+local initialEnemies = findEnemies()
+if #initialEnemies > 0 then
+    notify("Enemy Detection", "Found " .. #initialEnemies .. " enemies in the game", 3)
+    
+    -- Log the first 3 enemies (if there are that many)
+    local loggedCount = math.min(3, #initialEnemies)
+    local logMessage = "Closest enemies: "
+    
+    for i = 1, loggedCount do
+        if i > 1 then logMessage = logMessage .. ", " end
+        logMessage = logMessage .. initialEnemies[i].Name
+    end
+    
+    if #initialEnemies > 3 then
+        logMessage = logMessage .. " (+" .. (#initialEnemies - 3) .. " more)"
+    end
+    
+    notify("Enemy Log", logMessage, 5)
+else
+    notify("Enemy Detection", "No enemies found in the current area", 3)
+end
+
+-- Setup player joined detection to update target list
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        -- Add new player to dropdown
+        local options = PlayerTargetDropdown:GetOptions()
+        table.insert(options, player.Name)
+        PlayerTargetDropdown:Refresh(options, false)
+    end
+end)
+
+-- Setup player removing detection
+Players.PlayerRemoving:Connect(function(player)
+    if player ~= LocalPlayer then
+        -- Remove player from dropdown
+        local options = PlayerTargetDropdown:GetOptions()
+        for i, name in ipairs(options) do
+            if name == player.Name then
+                table.remove(options, i)
+                break
+            end
+        end
+        PlayerTargetDropdown:Refresh(options, false)
+    end
+end)
+
+-- Initial welcome message
+notify("Script Loaded", "Enemy Teleport Attack script has been loaded successfully. Press " .. KeybindButton.KeybindText.Text .. " to toggle or use the UI button.", 5)
