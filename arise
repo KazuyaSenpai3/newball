@@ -12,8 +12,8 @@ local ENEMIES_FOLDER = workspace.__Main.__Enemies.Client
 -- Settings
 local settings = {
     isRunning = false,
-    teleportHeight = 5, -- Increased height to position above heads
-    attackDelay = 0.2, -- Normal attack delay
+    teleportHeight = 3,
+    attackDelay = 0.2,
     teleportMethod = "CFrame", -- "CFrame" or "Tween"
     targetSearchRadius = 100,
     useSmartTP = true,
@@ -144,48 +144,48 @@ local function findTargetEnemy()
     return enemies[1]
 end
 
--- Teleport functions
-local function teleportToEnemy(enemy)
+-- Teleport functions - Using the approach from the second script
+function smartTeleport(targetCFrame)
     local character = LocalPlayer.Character
-    if not isValidCharacter(character) or not isValidEnemy(enemy) then return end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     
-    local enemyHead = enemy:FindFirstChild("Head") or enemy.HumanoidRootPart
-    local targetPosition = enemyHead.Position + Vector3.new(0, settings.teleportHeight, 0)
-    local targetCFrame = CFrame.new(targetPosition, enemyHead.Position) -- Look down at enemy
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
     
     if settings.teleportMethod == "CFrame" then
-        -- Direct CFrame with optional randomization
+        -- Direct CFrame with randomization from the second script
         if settings.useSmartTP then
-            -- Add slight randomization to avoid detection
+            -- Add slight randomization to teleport position
             local randomOffset = Vector3.new(
                 math.random(-10, 10) / 100,
-                math.random(-5, 5) / 100,
+                settings.teleportHeight + (math.random(-10, 10) / 100),
                 math.random(-10, 10) / 100
             )
-            character.HumanoidRootPart.CFrame = targetCFrame * CFrame.new(randomOffset)
+            humanoidRootPart.CFrame = targetCFrame * CFrame.new(randomOffset)
         else
-            character.HumanoidRootPart.CFrame = targetCFrame
+            -- Standard teleport
+            humanoidRootPart.CFrame = targetCFrame * CFrame.new(0, settings.teleportHeight, 0)
         end
     else
-        -- Tween method (smoother)
+        -- Tween method for smoother motion
         local tweenInfo = TweenInfo.new(
             0.2, -- Time
             Enum.EasingStyle.Linear,
             Enum.EasingDirection.Out
         )
         
-        local tween = TweenService:Create(character.HumanoidRootPart, tweenInfo, {CFrame = targetCFrame})
+        local targetPosition = targetCFrame * CFrame.new(0, settings.teleportHeight, 0)
+        local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetPosition})
         tween:Play()
-        tween.Completed:Wait() -- Wait for tween to complete
+        wait(0.2) -- Wait for tween to complete
     end
 end
 
--- Attack function
+-- Attack function - Normal attack without fast attack
 local function attackEnemy(enemy)
     local enemyID = getEnemyID(enemy)
     if not enemyID then return false end
     
-    -- Use the specific remote event for attacking
+    -- Use the specific remote event for attacking - normal attack
     ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
         {
             ["Event"] = "PunchAttack",
@@ -249,10 +249,10 @@ local function startAttackLoop()
             -- Update last target
             settings.lastTarget = enemy
             
-            -- Teleport above enemy head
-            teleportToEnemy(enemy)
+            -- Using the teleport method from the second script
+            smartTeleport(enemy.HumanoidRootPart.CFrame)
             
-            -- Normal attack
+            -- Normal attack - one attack per cycle
             attackEnemy(enemy)
             
             -- Wait for attack delay
@@ -388,7 +388,7 @@ local SettingsTab = Window:CreateTab("Settings", 4483362458)
 
 local TPHeightSlider = SettingsTab:CreateSlider({
     Name = "Teleport Height",
-    Range = {1, 10},
+    Range = {0, 10},
     Increment = 0.5,
     Suffix = "studs",
     CurrentValue = settings.teleportHeight,
@@ -475,215 +475,116 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 -- Error handling for critical functions
-    local function safeStart()
-        local success, error = pcall(function()
-            checkInitialEnemies()
-        end)
-        
-        if not success then
-            notify("Error", "Failed to initialize enemy detection: " .. tostring(error), 5)
+local function safeStart()
+    local success, err = pcall(function()
+        -- Check if the required game services are available
+        if not workspace:FindFirstChild("__Main") or not workspace.__Main:FindFirstChild("__Enemies") then
+            notify("Error", "Game structure not found. This script may not be compatible with this game.", 5)
+            return false
         end
         
-        -- Check for game compatibility
+        -- Check if the player character exists
+        if not LocalPlayer.Character then
+            notify("Warning", "Player character not found. Please wait for character to load.", 5)
+            return false
+        end
+        
+        -- Check if the ReplicatedStorage remotes exist
         if not ReplicatedStorage:FindFirstChild("BridgeNet2") then
-            notify("Warning", "This game may not be compatible with Auza Hub. Some features might not work.", 5)
-        end
-    end
-    
-    -- Handle remote event errors
-    local function safeSendRemote(...)
-        local success, error = pcall(function(...)
-            ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer(...)
-        end, ...)
-        
-        return success
-    end
-    
-    -- Monitor for game changes that might break the script
-    local gameMonitor = RunService.Heartbeat:Connect(function()
-        if not ENEMIES_FOLDER or not ENEMIES_FOLDER:IsDescendantOf(workspace) then
-            -- Try to relocate enemies folder if it changes
-            local newPath = workspace:FindFirstChild("__Main")
-            if newPath and newPath:FindFirstChild("__Enemies") and newPath.__Enemies:FindFirstChild("Client") then
-                ENEMIES_FOLDER = newPath.__Enemies.Client
-                notify("Path Updated", "Enemy folder path has been updated", 3)
-            end
-        end
-    end)
-    
-    -- Clean up function when script is terminated
-    local function cleanUp()
-        if attackConnection then attackConnection:Disconnect() end
-        if gameMonitor then gameMonitor:Disconnect() end
-        
-        -- Reset character state if needed
-        local character = LocalPlayer.Character
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end
-    end
-    
-    -- Credit tab
-    local CreditsTab = Window:CreateTab("Credits", 4483362458)
-    
-    CreditsTab:CreateSection("Auza Hub")
-    
-    CreditsTab:CreateParagraph({
-        Title = "About Auza Hub",
-        Content = "Auza Hub is an advanced combat & farming utility for this game. Created with efficiency and stability in mind."
-    })
-    
-    CreditsTab:CreateParagraph({
-        Title = "Version",
-        Content = "v1.0.0 - Initial Release"
-    })
-    
-    -- Add a simple animation to make the UI feel more premium
-    local function animateUI()
-        for _, tab in pairs(Window.Tabs) do
-            for _, element in pairs(tab.Elements) do
-                if element.ElementInstance then
-                    local originalTransparency = element.ElementInstance.BackgroundTransparency
-                    element.ElementInstance.BackgroundTransparency = 1
-                    
-                    local tween = TweenService:Create(
-                        element.ElementInstance, 
-                        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {BackgroundTransparency = originalTransparency}
-                    )
-                    tween:Play()
-                    wait(0.05)
-                end
-            end
-        end
-    end
-    
-    -- Information about game detection
-    local function detectGameInfo()
-        local gameInfo = {
-            name = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name,
-            placeId = game.PlaceId,
-            jobId = game.JobId
+            notify("Error", "Required remotes not found. Script may not function properly.", 5)
+            return false
         }
         
-        -- Add game info to Credits tab
-        CreditsTab:CreateParagraph({
-            Title = "Game Info",
-            Content = "Game: " .. gameInfo.name .. "\nPlace ID: " .. gameInfo.placeId .. "\nServer ID: " .. gameInfo.jobId
-        })
-        
-        return gameInfo
-    end
-    
-    -- Performance optimization
-    local function optimizePerformance()
-        -- Reduce render distance for better performance during farming
-        local oldRenderDistance
-        
-        -- Toggle for performance mode
-        local PerformanceToggle = SettingsTab:CreateToggle({
-            Name = "Performance Mode",
-            CurrentValue = false,
-            Flag = "PerformanceMode",
-            Callback = function(Value)
-                if Value then
-                    -- Store original value
-                    oldRenderDistance = UserSettings().GameSettings.SavedQualityLevel
-                    
-                    -- Reduce graphics quality
-                    settings().Rendering.QualityLevel = 1
-                    UserSettings().GameSettings.SavedQualityLevel = 1
-                    
-                    notify("Performance", "Performance mode enabled", 2)
-                else
-                    -- Restore original value
-                    if oldRenderDistance then
-                        settings().Rendering.QualityLevel = oldRenderDistance
-                        UserSettings().GameSettings.SavedQualityLevel = oldRenderDistance
-                    end
-                    
-                    notify("Performance", "Performance mode disabled", 2)
-                end
-            end,
-        })
-    end
-    
-    -- Anti-AFK functionality
-    local function setupAntiAFK()
-        local AntiAFKToggle = SettingsTab:CreateToggle({
-            Name = "Anti-AFK",
-            CurrentValue = true,
-            Flag = "AntiAFK",
-            Callback = function(Value)
-                if Value then
-                    -- Connect anti-AFK
-                    local VirtualUser = game:GetService("VirtualUser")
-                    LocalPlayer.Idled:Connect(function()
-                        VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-                        wait(1)
-                        VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-                    end)
-                    notify("Anti-AFK", "Anti-AFK system activated", 2)
-                end
-            end,
-        })
-        
-        -- Enable by default
-        AntiAFKToggle:Set(true)
-    end
-    
-    -- Server hop functionality
-    local function setupServerHop()
-        local ServerHopButton = SettingsTab:CreateButton({
-            Name = "Server Hop",
-            Callback = function()
-                notify("Server", "Finding a new server...", 3)
-                
-                local success, errorMsg = pcall(function()
-                    local TeleportService = game:GetService("TeleportService")
-                    local HttpService = game:GetService("HttpService")
-                    local servers = {}
-                    
-                    local req = request({
-                        Url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
-                    })
-                    
-                    local body = HttpService:JSONDecode(req.Body)
-                    
-                    if body and body.data then
-                        for _, server in pairs(body.data) do
-                            if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                                table.insert(servers, server.id)
-                            end
-                        end
-                        
-                        if #servers > 0 then
-                            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)])
-                        else
-                            notify("Server", "No suitable servers found", 3)
-                        end
-                    end
-                end)
-                
-                if not success then
-                    notify("Error", "Server hop failed: " .. tostring(errorMsg), 3)
-                end
-            end,
-        })
-    end
-    
-    -- Initialize all components
-    safeStart()
-    animateUI()
-    detectGameInfo()
-    optimizePerformance()
-    setupAntiAFK()
-    setupServerHop()
-    
-    -- Initial welcome message
-    notify("Auza Hub", "Successfully loaded! Press " .. KeybindButton.KeybindText.Text .. " to toggle autofarm or use the UI button.", 5)
-    
-    -- Handle script shutdown
-    game:BindToClose(function()
-        cleanUp()
+        -- Initialize the UI
+        checkInitialEnemies()
+        notify("Auza Hub", "Script loaded successfully!", 3)
+        return true
     end)
+    
+    if not success then
+        notify("Critical Error", "Failed to initialize script: " .. tostring(err), 10)
+        return false
+    end
+    
+    return true
+}
+
+-- Initialize the script
+local function initialize()
+    -- Setup watch for character respawn
+    if not LocalPlayer.Character then
+        LocalPlayer.CharacterAdded:Wait()
+    end
+    
+    -- Initialize the player dropdown
+    PlayerTargetDropdown:Refresh(getPlayerNames(), true)
+    
+    -- Add a check for the game structure
+    local gameStructureCheck = RunService.Heartbeat:Connect(function()
+        if not ENEMIES_FOLDER or not ENEMIES_FOLDER:IsDescendantOf(game) then
+            -- Try to find the enemies folder again
+            ENEMIES_FOLDER = workspace:FindFirstChild("__Main") and 
+                            workspace.__Main:FindFirstChild("__Enemies") and 
+                            workspace.__Main.__Enemies:FindFirstChild("Client")
+            
+            if not ENEMIES_FOLDER and settings.isRunning then
+                notify("Warning", "Enemies folder not found. Autofarm may not work properly.", 3)
+                settings.isRunning = false
+                ToggleButton:Set(false)
+                if attackConnection then
+                    stopAttackLoop()
+                end
+            end
+        end
+    end)
+    
+    -- Create cleanup function
+    local function cleanup()
+        if gameStructureCheck then
+            gameStructureCheck:Disconnect()
+        end
+        if attackConnection then
+            stopAttackLoop()
+        end
+    end
+    
+    -- Register cleanup on script termination
+    Rayfield.Flags.RegistryDestroyingSignal = function()
+        cleanup()
+    end
+end
+
+-- Run the script
+if safeStart() then
+    initialize()
+else
+    wait(5)
+    Rayfield:Destroy()
+end
+
+-- Prevent script from running multiple times
+if _G.AuzaHubLoaded then
+    notify("Already Running", "Auza Hub is already running!", 3)
+    return
+else
+    _G.AuzaHubLoaded = true
+end
+
+-- Add credits
+local CreditsTab = Window:CreateTab("Credits", 4483362458)
+
+CreditsTab:CreateLabel("Auza Hub - Advanced Combat Script")
+CreditsTab:CreateLabel("Created by Auza Team")
+CreditsTab:CreateLabel("Version 1.0.0")
+
+CreditsTab:CreateButton({
+    Name = "Copy Discord Invite",
+    Callback = function()
+        setclipboard("https://discord.gg/auzahub")
+        notify("Discord", "Discord invite copied to clipboard!", 3)
+    end,
+})
+
+-- Log successful load
+notify("Auza Hub", "Script loaded successfully!", 5)
+print("Auza Hub - Advanced Combat Script loaded successfully!")
