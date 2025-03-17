@@ -1,15 +1,14 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
 -- Path to enemies folder
 local ENEMIES_FOLDER = workspace.__Main.__Enemies.Client
 
--- Settings
+-- Settings that can be changed from UI
 local settings = {
     isRunning = false,
     teleportHeight = 3,
@@ -17,135 +16,175 @@ local settings = {
     teleportMethod = "CFrame", -- "CFrame" or "Tween"
     targetSearchRadius = 100,
     useSmartTP = true,
-    selectedEnemy = "Nearest", -- "Nearest", "Strongest", "Weakest", "Player"
-    targetPlayer = nil, -- For player targeting
-    autoArise = true, -- Auto arise after kill
-    lastTarget = nil, -- Track last target for kill detection
-    useScreenTap = true -- Use screen tap for attacking
+    pressEAfterKill = true,
+    currentTarget = nil,
+    lastTargetHealth = 0
 }
 
--- Load Rayfield UI Library
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Create a simple UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TPAttackGui"
+ScreenGui.Parent = game:GetService("CoreGui")
 
--- Create window
-local Window = Rayfield:CreateWindow({
-    Name = "Auza Hub",
-    LoadingTitle = "Auza Hub - Advanced Combat Script",
-    LoadingSubtitle = "by Auza Team",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "AuzaHubConfig",
-        FileName = "Config"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "",
-        RememberJoins = true
-    },
-    KeySystem = false
-})
+local Frame = Instance.new("Frame")
+Frame.Name = "MainFrame"
+Frame.Size = UDim2.new(0, 200, 0, 240)
+Frame.Position = UDim2.new(0.8, 0, 0.5, -120)
+Frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+Frame.Parent = ScreenGui
 
--- Utility functions
-local function notify(title, content, duration)
-    Rayfield:Notify({
-        Title = title,
-        Content = content,
-        Duration = duration or 3,
-        Image = 4483362458
-    })
-end
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "Mobile TP Attack"
+Title.TextSize = 18
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = Frame
 
--- Get unique ID for enemy
-local function getEnemyID(enemy)
-    if enemy and enemy:IsA("Model") then
-        return enemy:GetAttribute("ID") or enemy.Name
-    end
-    return nil
-end
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0.8, 0, 0, 25)
+ToggleButton.Position = UDim2.new(0.1, 0, 0.2, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Text = "Start"
+ToggleButton.TextSize = 14
+ToggleButton.Font = Enum.Font.SourceSans
+ToggleButton.Parent = Frame
 
--- Check if character is valid
-local function isValidCharacter(char)
-    return char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid")
-end
+local MethodToggle = Instance.new("TextButton")
+MethodToggle.Name = "MethodToggle"
+MethodToggle.Size = UDim2.new(0.8, 0, 0, 25)
+MethodToggle.Position = UDim2.new(0.1, 0, 0.35, 0)
+MethodToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+MethodToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+MethodToggle.Text = "TP Method: CFrame"
+MethodToggle.TextSize = 14
+MethodToggle.Font = Enum.Font.SourceSans
+MethodToggle.Parent = Frame
 
--- Check if enemy is valid
-local function isValidEnemy(enemy)
-    return enemy and enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid")
-end
+local SmartTPToggle = Instance.new("TextButton")
+SmartTPToggle.Name = "SmartTPToggle"
+SmartTPToggle.Size = UDim2.new(0.8, 0, 0, 25)
+SmartTPToggle.Position = UDim2.new(0.1, 0, 0.5, 0)
+SmartTPToggle.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+SmartTPToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SmartTPToggle.Text = "Smart TP: ON"
+SmartTPToggle.TextSize = 14
+SmartTPToggle.Font = Enum.Font.SourceSans
+SmartTPToggle.Parent = Frame
 
--- Enemy detection functions
-local function findEnemies()
+local AutoEToggle = Instance.new("TextButton")
+AutoEToggle.Name = "AutoEToggle"
+AutoEToggle.Size = UDim2.new(0.8, 0, 0, 25)
+AutoEToggle.Position = UDim2.new(0.1, 0, 0.65, 0)
+AutoEToggle.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+AutoEToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoEToggle.Text = "Auto E: ON"
+AutoEToggle.TextSize = 14
+AutoEToggle.Font = Enum.Font.SourceSans
+AutoEToggle.Parent = Frame
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Name = "Status"
+StatusLabel.Size = UDim2.new(0.8, 0, 0, 20)
+StatusLabel.Position = UDim2.new(0.1, 0, 0.8, 0)
+StatusLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusLabel.Text = "Ready"
+StatusLabel.TextSize = 12
+StatusLabel.Font = Enum.Font.SourceSans
+StatusLabel.Parent = Frame
+
+local TargetLabel = Instance.new("TextLabel")
+TargetLabel.Name = "Target"
+TargetLabel.Size = UDim2.new(0.8, 0, 0, 20)
+TargetLabel.Position = UDim2.new(0.1, 0, 0.9, 0)
+TargetLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+TargetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TargetLabel.Text = "No Target"
+TargetLabel.TextSize = 12
+TargetLabel.Font = Enum.Font.SourceSans
+TargetLabel.Parent = Frame
+
+-- Function to find enemies using the specific path
+function findEnemies()
     local enemies = {}
     
     -- Check if the folder exists
-    if not ENEMIES_FOLDER then
-        warn("Enemy folder not found!")
-        return enemies
-    end
-    
-    -- Get all valid enemies from the folder
-    for _, enemy in pairs(ENEMIES_FOLDER:GetChildren()) do
-        if isValidEnemy(enemy) then
-            table.insert(enemies, enemy)
+    if ENEMIES_FOLDER then
+        -- Get all children of the enemies folder
+        for _, enemy in pairs(ENEMIES_FOLDER:GetChildren()) do
+            -- Add the enemy to our list if it has the necessary parts
+            if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                table.insert(enemies, enemy)
+            end
         end
+    else
+        warn("Enemy folder not found!")
     end
     
     return enemies
 end
 
-local function findTargetEnemy()
-    -- If targeting a player, prioritize that
-    if settings.selectedEnemy == "Player" and settings.targetPlayer then
-        local targetPlayer = Players:FindFirstChild(settings.targetPlayer)
-        if targetPlayer and isValidCharacter(targetPlayer.Character) then
-            return targetPlayer.Character
-        end
-    end
-    
+-- Function to find nearest enemy
+function findNearestEnemy()
     local enemies = findEnemies()
-    if #enemies == 0 then
-        return nil
+    local nearestEnemy = nil
+    local shortestDistance = settings.targetSearchRadius
+    
+    -- If we have a current target, check if it's still alive
+    if settings.currentTarget and settings.currentTarget:FindFirstChild("Humanoid") and 
+       settings.currentTarget.Humanoid.Health <= 0 then
+        -- Target is dead, press E three times if enabled
+        if settings.pressEAfterKill then
+            pressEKey(3)
+        end
+        -- Clear current target
+        settings.currentTarget = nil
     end
     
-    -- Different targeting methods
-    if settings.selectedEnemy == "Nearest" then
-        local nearestEnemy = nil
-        local shortestDistance = settings.targetSearchRadius
-        local playerPosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and
-                              LocalPlayer.Character.HumanoidRootPart.Position
-        
-        if not playerPosition then return nil end
-        
+    -- If we don't have a target or it's dead, find a new one
+    if not settings.currentTarget then
         for _, enemy in pairs(enemies) do
-            local distance = (enemy.HumanoidRootPart.Position - playerPosition).Magnitude
-            if distance < shortestDistance then
-                shortestDistance = distance
-                nearestEnemy = enemy
+            if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    nearestEnemy = enemy
+                end
             end
         end
         
-        return nearestEnemy
-    elseif settings.selectedEnemy == "Strongest" then
-        -- Sort by health (highest first)
-        table.sort(enemies, function(a, b)
-            return a.Humanoid.Health > b.Humanoid.Health
-        end)
-        
-        return enemies[1]
-    elseif settings.selectedEnemy == "Weakest" then
-        -- Sort by health (lowest first)
-        table.sort(enemies, function(a, b)
-            return a.Humanoid.Health < b.Humanoid.Health
-        end)
-        
-        return enemies[1]
+        if nearestEnemy then
+            settings.currentTarget = nearestEnemy
+            settings.lastTargetHealth = nearestEnemy.Humanoid.Health
+            TargetLabel.Text = "Target: " .. nearestEnemy.Name
+        end
     end
     
-    -- Default to nearest if no valid selection
-    return enemies[1]
+    return settings.currentTarget
 end
 
--- Enhanced teleport function - Integrated from second script
+-- Function to press E key multiple times
+function pressEKey(times)
+    for i = 1, times do
+        -- For mobile, we can simulate key presses using VirtualInputManager
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        wait(0.1)
+        StatusLabel.Text = "Pressed E (" .. i .. "/" .. times .. ")"
+    end
+end
+
+-- Teleport bypass methods
 function smartTeleport(targetCFrame)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -153,7 +192,7 @@ function smartTeleport(targetCFrame)
     local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
     
     if settings.teleportMethod == "CFrame" then
-        -- Direct CFrame with randomization from the second script
+        -- Method 1: Direct CFrame but with randomization to avoid detection
         if settings.useSmartTP then
             -- Add slight randomization to teleport position
             local randomOffset = Vector3.new(
@@ -167,510 +206,187 @@ function smartTeleport(targetCFrame)
             humanoidRootPart.CFrame = targetCFrame * CFrame.new(0, settings.teleportHeight, 0)
         end
     else
-        -- Tween method for smoother motion
+        -- Method 2: Tween Service (smoother motion, may bypass some anti-teleport systems)
+        local tweenService = game:GetService("TweenService")
         local tweenInfo = TweenInfo.new(
             0.2, -- Time
-            Enum.EasingStyle.Linear,
-            Enum.EasingDirection.Out
+            Enum.EasingStyle.Linear, -- Style
+            Enum.EasingDirection.Out -- Direction
         )
         
         local targetPosition = targetCFrame * CFrame.new(0, settings.teleportHeight, 0)
-        local tween = TweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetPosition})
+        local tween = tweenService:Create(humanoidRootPart, tweenInfo, {CFrame = targetPosition})
         tween:Play()
         wait(0.2) -- Wait for tween to complete
     end
 end
 
--- Enhanced attack function with screen tap option
-local function attackEnemy(enemy)
-    local enemyID = getEnemyID(enemy)
-    if not enemyID then return false end
+-- Function to simulate mobile attack (tap on screen)
+function performMobileAttack()
+    -- Get the center of the screen for tapping
+    local screenSize = workspace.CurrentCamera.ViewportSize
+    local centerX = screenSize.X / 2
+    local centerY = screenSize.Y / 2
     
-    if settings.useScreenTap then
-        -- Method 1: Mouse click (screen tap)
-        mouse1click()
+    -- Simulate a tap on the center of the screen
+    VirtualInputManager:SendTouchEvent(1, true, centerX, centerY)
+    wait(0.05)
+    VirtualInputManager:SendTouchEvent(1, false, centerX, centerY)
+    
+    -- Status update
+    StatusLabel.Text = "Attacked!"
+    wait(0.2)
+    if settings.isRunning then
+        StatusLabel.Text = "Running..."
     else
-        -- Method 2: Remote event
-        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
-            {
-                ["Event"] = "PunchAttack",
-                ["Enemy"] = enemyID
-            },
-            ""
-        })
-    end
-    
-    return true
-end
-
--- Auto arise function
-local function performArise()
-    for i = 1, 3 do
-        -- Simulate pressing E key
-        keypress(0x45) -- E key
-        wait(0.1)
-        keyrelease(0x45)
-        wait(0.1)
+        StatusLabel.Text = "Ready"
     end
 end
 
--- Check if target is dead
-local function isTargetDead(target)
-    if not target then return true end
-    
-    -- Check if the target has a valid humanoid and if it's dead
-    if target:FindFirstChild("Humanoid") then
-        return target.Humanoid.Health <= 0
+-- Function to check if target is killed
+function checkTargetKilled()
+    if settings.currentTarget and settings.currentTarget:FindFirstChild("Humanoid") then
+        local currentHealth = settings.currentTarget.Humanoid.Health
+        
+        -- Check if target health dropped to 0
+        if settings.lastTargetHealth > 0 and currentHealth <= 0 then
+            return true
+        end
+        
+        -- Update last known health
+        settings.lastTargetHealth = currentHealth
     end
-    
-    -- If there's no Humanoid, check if the target still exists
-    return not target:IsDescendantOf(game)
+    return false
 end
 
 -- Main attack loop
 local attackConnection = nil
 
-local function startAttackLoop()
+function startAttackLoop()
     if attackConnection then return end
-    
-    notify("Auza Hub", "Autofarm activated successfully!", 3)
     
     attackConnection = RunService.Heartbeat:Connect(function()
         if not settings.isRunning then return end
         
         local character = LocalPlayer.Character
-        if not isValidCharacter(character) then return end
+        if not character or not character:FindFirstChild("HumanoidRootPart") then return end
         
-        -- Check if previous target is dead
-        if settings.lastTarget and isTargetDead(settings.lastTarget) then
-            if settings.autoArise then
-                performArise()
-            end
-            settings.lastTarget = nil
-            notify("Target Update", "Previous target eliminated. Finding new target...", 2)
-            wait(0.5) -- Brief delay after kill
-        end
-        
-        local enemy = findTargetEnemy()
+        local enemy = findNearestEnemy()
         if enemy then
-            -- Update last target
-            settings.lastTarget = enemy
-            
-            -- Using the enhanced teleport method
             smartTeleport(enemy.HumanoidRootPart.CFrame)
+            wait(0.1) -- Small delay before attack
+            performMobileAttack()
+            wait(settings.attackDelay) -- Delay between attacks
             
-            -- Attack with screen tap or remote
-            attackEnemy(enemy)
-            
-            -- Wait for attack delay
-            wait(settings.attackDelay)
+            -- Check if target was killed
+            if checkTargetKilled() then
+                if settings.pressEAfterKill then
+                    pressEKey(3)
+                end
+                -- Clear current target to find a new one
+                settings.currentTarget = nil
+            end
         else
-            -- No enemies found, wait a bit before checking again
-            wait(0.2)
+            StatusLabel.Text = "No targets found"
+            wait(0.5)
         end
     end)
 end
 
-local function stopAttackLoop()
+function stopAttackLoop()
     if attackConnection then
         attackConnection:Disconnect()
         attackConnection = nil
-        notify("Auza Hub", "Autofarm deactivated.", 3)
     end
 end
 
--- Create UI elements
-local MainTab = Window:CreateTab("Main", 4483362458)
-
-local ToggleButton = MainTab:CreateToggle({
-    Name = "Enable Autofarm",
-    CurrentValue = false,
-    Flag = "AutofarmEnabled",
-    Callback = function(Value)
-        settings.isRunning = Value
-        if Value then
-            startAttackLoop()
-        else
-            stopAttackLoop()
-        end
-    end,
-})
-
-local TeleportMethodDropdown = MainTab:CreateDropdown({
-    Name = "Teleport Method",
-    Options = {"CFrame", "Tween"},
-    CurrentOption = settings.teleportMethod,
-    Flag = "TPMethod",
-    Callback = function(Option)
-        settings.teleportMethod = Option
-        notify("Settings Changed", "Teleport method set to: " .. Option, 2)
-    end,
-})
-
-local SmartTPToggle = MainTab:CreateToggle({
-    Name = "Smart Teleport",
-    CurrentValue = settings.useSmartTP,
-    Flag = "SmartTP",
-    Callback = function(Value)
-        settings.useSmartTP = Value
-    end,
-})
-
-local TargetingDropdown = MainTab:CreateDropdown({
-    Name = "Target Selection",
-    Options = {"Nearest", "Strongest", "Weakest", "Player"},
-    CurrentOption = settings.selectedEnemy,
-    Flag = "TargetSelection",
-    Callback = function(Option)
-        settings.selectedEnemy = Option
-        notify("Settings Changed", "Target selection set to: " .. Option, 2)
-    end,
-})
-
--- Get player list for targeting
-local function getPlayerNames()
-    local playerNames = {}
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            table.insert(playerNames, player.Name)
-        end
-    end
-    return playerNames
-end
-
-local PlayerTargetDropdown = MainTab:CreateDropdown({
-    Name = "Select Player Target",
-    Options = getPlayerNames(),
-    CurrentOption = "",
-    Flag = "PlayerTarget",
-    Callback = function(Option)
-        settings.targetPlayer = Option
-        notify("Target Selected", "Now targeting player: " .. Option, 2)
-    end,
-})
-
--- Refresh player list button
-local RefreshPlayersButton = MainTab:CreateButton({
-    Name = "Refresh Player List",
-    Callback = function()
-        PlayerTargetDropdown:Refresh(getPlayerNames(), true)
-        notify("Players Refreshed", "Player list has been updated.", 2)
-    end,
-})
-
--- Combat Tab
-local CombatTab = Window:CreateTab("Combat", 4483362458)
-
-local AttackMethodToggle = CombatTab:CreateToggle({
-    Name = "Use Screen Tap for Attack",
-    CurrentValue = settings.useScreenTap,
-    Flag = "ScreenTap",
-    Callback = function(Value)
-        settings.useScreenTap = Value
-        notify("Attack Method", "Now using " .. (Value and "screen tap" or "remote event") .. " for attacks", 2)
-    end,
-})
-
-local AttackDelaySlider = CombatTab:CreateSlider({
-    Name = "Attack Delay",
-    Range = {0.1, 1.0},
-    Increment = 0.05,
-    Suffix = "seconds",
-    CurrentValue = settings.attackDelay,
-    Flag = "AttackDelay",
-    Callback = function(Value)
-        settings.attackDelay = Value
-    end,
-})
-
-local AutoAriseToggle = CombatTab:CreateToggle({
-    Name = "Auto Arise After Kill",
-    CurrentValue = settings.autoArise,
-    Flag = "AutoArise",
-    Callback = function(Value)
-        settings.autoArise = Value
-    end,
-})
-
-local ManualAriseButton = CombatTab:CreateButton({
-    Name = "Manually Arise (E x3)",
-    Callback = function()
-        performArise()
-        notify("Manual Action", "Performed arise action.", 2)
-    end,
-})
-
--- Settings Tab
-local SettingsTab = Window:CreateTab("Settings", 4483362458)
-
-local TPHeightSlider = SettingsTab:CreateSlider({
-    Name = "Teleport Height",
-    Range = {0, 10},
-    Increment = 0.5,
-    Suffix = "studs",
-    CurrentValue = settings.teleportHeight,
-    Flag = "TPHeight",
-    Callback = function(Value)
-        settings.teleportHeight = Value
-    end,
-})
-
-local SearchRadiusSlider = SettingsTab:CreateSlider({
-    Name = "Search Radius",
-    Range = {10, 500},
-    Increment = 10,
-    Suffix = "studs",
-    CurrentValue = settings.targetSearchRadius,
-    Flag = "SearchRadius",
-    Callback = function(Value)
-        settings.targetSearchRadius = Value
-    end,
-})
-
-local KeybindButton = SettingsTab:CreateKeybind({
-    Name = "Toggle Script Keybind",
-    CurrentKeybind = "F",
-    HoldToInteract = false,
-    Flag = "ToggleKeybind",
-    Callback = function()
-        settings.isRunning = not settings.isRunning
-        ToggleButton:Set(settings.isRunning)
-        if settings.isRunning then
-            startAttackLoop()
-        else
-            stopAttackLoop()
-        end
-    end,
-})
-
-local DestroyButton = SettingsTab:CreateButton({
-    Name = "Destroy UI",
-    Callback = function()
+-- UI Button Handlers
+ToggleButton.MouseButton1Click:Connect(function()
+    settings.isRunning = not settings.isRunning
+    
+    if settings.isRunning then
+        ToggleButton.Text = "Stop"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+        StatusLabel.Text = "Running..."
+        startAttackLoop()
+    else
+        ToggleButton.Text = "Start"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        StatusLabel.Text = "Ready"
         stopAttackLoop()
-        Rayfield:Destroy()
-    end,
-})
+    end
+end)
 
--- Initialize enemy check
-local function checkInitialEnemies()
-    local initialEnemies = findEnemies()
-    if #initialEnemies > 0 then
-        notify("Enemy Detection", "Found " .. #initialEnemies .. " enemies in the game", 3)
-        
-        -- Log the first 3 enemies (if there are that many)
-        local loggedCount = math.min(3, #initialEnemies)
-        local logMessage = "Closest enemies: "
-        
-        for i = 1, loggedCount do
-            if i > 1 then logMessage = logMessage .. ", " end
-            logMessage = logMessage .. initialEnemies[i].Name
-        end
-        
-        if #initialEnemies > 3 then
-            logMessage = logMessage .. " (+" .. (#initialEnemies - 3) .. " more)"
-        end
-        
-        notify("Enemy Log", logMessage, 5)
+MethodToggle.MouseButton1Click:Connect(function()
+    if settings.teleportMethod == "CFrame" then
+        settings.teleportMethod = "Tween"
+        MethodToggle.Text = "TP Method: Tween"
     else
-        notify("Enemy Detection", "No enemies found in the current area", 3)
-    end
-end
-
--- Setup player change detection
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        -- Update player dropdown
-        PlayerTargetDropdown:Refresh(getPlayerNames(), false)
+        settings.teleportMethod = "CFrame"
+        MethodToggle.Text = "TP Method: CFrame"
     end
 end)
 
-Players.PlayerRemoving:Connect(function(player)
-    if player ~= LocalPlayer and settings.targetPlayer == player.Name then
-        settings.targetPlayer = nil
-        PlayerTargetDropdown:Refresh(getPlayerNames(), false)
+SmartTPToggle.MouseButton1Click:Connect(function()
+    settings.useSmartTP = not settings.useSmartTP
+    
+    if settings.useSmartTP then
+        SmartTPToggle.Text = "Smart TP: ON"
+        SmartTPToggle.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+    else
+        SmartTPToggle.Text = "Smart TP: OFF"
+        SmartTPToggle.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
     end
 end)
 
--- Error handling for critical functions
-local function safeStart()
-    local success, err = pcall(function()
-        -- Check if the required game services are available
-        if not workspace:FindFirstChild("__Main") or not workspace.__Main:FindFirstChild("__Enemies") then
-            notify("Error", "Game structure not found. This script may not be compatible with this game.", 5)
-            return false
-        end
-        
-        -- Check if the player character exists
-        if not LocalPlayer.Character then
-            notify("Warning", "Player character not found. Please wait for character to load.", 5)
-            return false
-        end
-        
-        -- Check if the ReplicatedStorage remotes exist
-        if not ReplicatedStorage:FindFirstChild("BridgeNet2") then
-            notify("Error", "Required remotes not found. Script may not function properly.", 5)
-            return false
-        end
-        
-        -- Initialize the UI
-        checkInitialEnemies()
-        notify("Auza Hub", "Script loaded successfully!", 3)
-        return true
-    end)
+AutoEToggle.MouseButton1Click:Connect(function()
+    settings.pressEAfterKill = not settings.pressEAfterKill
     
-    if not success then
-        notify("Critical Error", "Failed to initialize script: " .. tostring(err), 10)
-        return false
+    if settings.pressEAfterKill then
+        AutoEToggle.Text = "Auto E: ON"
+        AutoEToggle.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+    else
+        AutoEToggle.Text = "Auto E: OFF"
+        AutoEToggle.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
     end
-    
-    return true
-end
+end)
 
--- Initialize the script
-local function initialize()
-    -- Setup watch for character respawn
-    if not LocalPlayer.Character then
-        LocalPlayer.CharacterAdded:Wait()
-    end
+-- Keybind for toggling on/off (works on mobile and PC)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
     
-    -- Initialize the player dropdown
-    PlayerTargetDropdown:Refresh(getPlayerNames(), true)
-    
-    -- Add a check for the game structure
-    local gameStructureCheck = RunService.Heartbeat:Connect(function()
-        if not ENEMIES_FOLDER or not ENEMIES_FOLDER:IsDescendantOf(game) then
-            -- Try to find the enemies folder again
-            ENEMIES_FOLDER = workspace:FindFirstChild("__Main") and 
-                            workspace.__Main:FindFirstChild("__Enemies") and 
-                            workspace.__Main.__Enemies:FindFirstChild("Client")
-            
-            if not ENEMIES_FOLDER and settings.isRunning then
-                notify("Warning", "Enemies folder not found. Autofarm may not work properly.", 3)
-                settings.isRunning = false
-                ToggleButton:Set(false)
-                if attackConnection then
-                    stopAttackLoop()
-                end
-            end
-        end
-    end)
-    
-    -- Character respawn detector
-    LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+    if input.KeyCode == Enum.KeyCode.F then
+        -- Toggle the script when F key is pressed
+        settings.isRunning = not settings.isRunning
+        
         if settings.isRunning then
-            notify("Character Reset", "Character respawned. Waiting for HumanoidRootPart to load...", 3)
-            newCharacter:WaitForChild("HumanoidRootPart")
-            wait(1) -- Wait a bit to ensure everything loads
-            notify("Character Reset", "Character loaded. Resuming autofarm.", 3)
-        end
-    end)
-    
-    -- Create cleanup function
-    local function cleanup()
-        if gameStructureCheck then
-            gameStructureCheck:Disconnect()
-        end
-        if attackConnection then
+            ToggleButton.Text = "Stop"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+            StatusLabel.Text = "Running..."
+            startAttackLoop()
+        else
+            ToggleButton.Text = "Start"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+            StatusLabel.Text = "Ready"
             stopAttackLoop()
         end
     end
-    
-    -- Register cleanup on script termination
-    Rayfield.Flags.RegistryDestroyingSignal = function()
-        cleanup()
-    end
-end
-
--- Create additional tab with debug info
-local DebugTab = Window:CreateTab("Debug", 4483362458)
-
-local EnemyCountLabel = DebugTab:CreateLabel("Enemies Found: Checking...")
-local LastTargetLabel = DebugTab:CreateLabel("Last Target: None")
-local HealthLabel = DebugTab:CreateLabel("Target Health: N/A")
-
--- Debug update function
-local function updateDebugInfo()
-    local enemies = findEnemies()
-    EnemyCountLabel:Set("Enemies Found: " .. #enemies)
-    
-    if settings.lastTarget and settings.lastTarget:FindFirstChild("Humanoid") then
-        LastTargetLabel:Set("Last Target: " .. settings.lastTarget.Name)
-        HealthLabel:Set("Target Health: " .. math.floor(settings.lastTarget.Humanoid.Health) .. "/" .. math.floor(settings.lastTarget.Humanoid.MaxHealth))
-    else
-        LastTargetLabel:Set("Last Target: None")
-        HealthLabel:Set("Target Health: N/A")
-    end
-end
-
--- Add debug update loop
-local debugUpdateConnection = RunService.Heartbeat:Connect(function()
-    if not settings.isRunning then return end
-    
-    -- Update debug info every second
-    if tick() % 1 < 0.1 then
-        updateDebugInfo()
-    end
 end)
 
--- Create test button
-local TestTeleportButton = DebugTab:CreateButton({
-    Name = "Test Teleport",
-    Callback = function()
-        local enemy = findTargetEnemy()
-        if enemy then
-            notify("Test", "Teleporting to " .. enemy.Name, 2)
-            smartTeleport(enemy.HumanoidRootPart.CFrame)
-        else
-            notify("Test", "No target found", 2)
-        end
-    end,
-})
+-- Anti-AFK and cleanup
+local VirtualUser = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
 
-local TestAttackButton = DebugTab:CreateButton({
-    Name = "Test Attack",
-    Callback = function()
-        local enemy = findTargetEnemy()
-        if enemy then
-            notify("Test", "Attacking " .. enemy.Name, 2)
-            attackEnemy(enemy)
-        else
-            notify("Test", "No target found", 2)
-        end
-    end,
-})
-
--- Run the script
-if safeStart() then
-    initialize()
-    notify("Ready", "Script initialized and ready to use!", 3)
-else
-    wait(5)
-    Rayfield:Destroy()
+-- Initialize
+if not game:IsLoaded() then
+    game.Loaded:Wait()
 end
-
--- Prevent script from running multiple times
-if _G.AuzaHubLoaded then
-    notify("Already Running", "Auza Hub is already running!", 3)
-    return
-else
-    _G.AuzaHubLoaded = true
-end
-
--- Add credits
-local CreditsTab = Window:CreateTab("Credits", 4483362458)
-
-CreditsTab:CreateLabel("Auza Hub - Advanced Combat Script")
-CreditsTab:CreateLabel("Created by Auza Team")
-CreditsTab:CreateLabel("Version 1.1.0")
-
-CreditsTab:CreateButton({
-    Name = "Copy Discord Invite",
-    Callback = function()
-        setclipboard("https://discord.gg/auzahub")
-        notify("Discord", "Discord invite copied to clipboard!", 3)
-    end,
-})
-
--- Log successful load
-notify("Auza Hub", "Script loaded successfully!", 5)
-print("Auza Hub - Advanced Combat Script loaded successfully!")
+LocalPlayer.CharacterAdded:Connect(function()
+    if settings.isRunning then
+        wait(1) -- Wait for character to fully load
+        startAttackLoop()
+    end
+end)
