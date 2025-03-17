@@ -20,7 +20,8 @@ local settings = {
     selectedEnemy = "Nearest", -- "Nearest", "Strongest", "Weakest", "Player"
     targetPlayer = nil, -- For player targeting
     autoArise = true, -- Auto arise after kill
-    lastTarget = nil -- Track last target for kill detection
+    lastTarget = nil, -- Track last target for kill detection
+    useScreenTap = true -- Use screen tap for attacking
 }
 
 -- Load Rayfield UI Library
@@ -144,7 +145,7 @@ local function findTargetEnemy()
     return enemies[1]
 end
 
--- Teleport functions - Using the approach from the second script
+-- Enhanced teleport function - Integrated from second script
 function smartTeleport(targetCFrame)
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
@@ -180,19 +181,24 @@ function smartTeleport(targetCFrame)
     end
 end
 
--- Attack function - Normal attack without fast attack
+-- Enhanced attack function with screen tap option
 local function attackEnemy(enemy)
     local enemyID = getEnemyID(enemy)
     if not enemyID then return false end
     
-    -- Use the specific remote event for attacking - normal attack
-    ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
-        {
-            ["Event"] = "PunchAttack",
-            ["Enemy"] = enemyID
-        },
-        ""
-    })
+    if settings.useScreenTap then
+        -- Method 1: Mouse click (screen tap)
+        mouse1click()
+    else
+        -- Method 2: Remote event
+        ReplicatedStorage.BridgeNet2.dataRemoteEvent:FireServer({
+            {
+                ["Event"] = "PunchAttack",
+                ["Enemy"] = enemyID
+            },
+            ""
+        })
+    end
     
     return true
 end
@@ -241,6 +247,7 @@ local function startAttackLoop()
                 performArise()
             end
             settings.lastTarget = nil
+            notify("Target Update", "Previous target eliminated. Finding new target...", 2)
             wait(0.5) -- Brief delay after kill
         end
         
@@ -249,10 +256,10 @@ local function startAttackLoop()
             -- Update last target
             settings.lastTarget = enemy
             
-            -- Using the teleport method from the second script
+            -- Using the enhanced teleport method
             smartTeleport(enemy.HumanoidRootPart.CFrame)
             
-            -- Normal attack - one attack per cycle
+            -- Attack with screen tap or remote
             attackEnemy(enemy)
             
             -- Wait for attack delay
@@ -353,6 +360,16 @@ local RefreshPlayersButton = MainTab:CreateButton({
 
 -- Combat Tab
 local CombatTab = Window:CreateTab("Combat", 4483362458)
+
+local AttackMethodToggle = CombatTab:CreateToggle({
+    Name = "Use Screen Tap for Attack",
+    CurrentValue = settings.useScreenTap,
+    Flag = "ScreenTap",
+    Callback = function(Value)
+        settings.useScreenTap = Value
+        notify("Attack Method", "Now using " .. (Value and "screen tap" or "remote event") .. " for attacks", 2)
+    end,
+})
 
 local AttackDelaySlider = CombatTab:CreateSlider({
     Name = "Attack Delay",
@@ -493,7 +510,7 @@ local function safeStart()
         if not ReplicatedStorage:FindFirstChild("BridgeNet2") then
             notify("Error", "Required remotes not found. Script may not function properly.", 5)
             return false
-        }
+        end
         
         -- Initialize the UI
         checkInitialEnemies()
@@ -507,7 +524,7 @@ local function safeStart()
     end
     
     return true
-}
+end
 
 -- Initialize the script
 local function initialize()
@@ -538,6 +555,16 @@ local function initialize()
         end
     end)
     
+    -- Character respawn detector
+    LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+        if settings.isRunning then
+            notify("Character Reset", "Character respawned. Waiting for HumanoidRootPart to load...", 3)
+            newCharacter:WaitForChild("HumanoidRootPart")
+            wait(1) -- Wait a bit to ensure everything loads
+            notify("Character Reset", "Character loaded. Resuming autofarm.", 3)
+        end
+    end)
+    
     -- Create cleanup function
     local function cleanup()
         if gameStructureCheck then
@@ -554,9 +581,68 @@ local function initialize()
     end
 end
 
+-- Create additional tab with debug info
+local DebugTab = Window:CreateTab("Debug", 4483362458)
+
+local EnemyCountLabel = DebugTab:CreateLabel("Enemies Found: Checking...")
+local LastTargetLabel = DebugTab:CreateLabel("Last Target: None")
+local HealthLabel = DebugTab:CreateLabel("Target Health: N/A")
+
+-- Debug update function
+local function updateDebugInfo()
+    local enemies = findEnemies()
+    EnemyCountLabel:Set("Enemies Found: " .. #enemies)
+    
+    if settings.lastTarget and settings.lastTarget:FindFirstChild("Humanoid") then
+        LastTargetLabel:Set("Last Target: " .. settings.lastTarget.Name)
+        HealthLabel:Set("Target Health: " .. math.floor(settings.lastTarget.Humanoid.Health) .. "/" .. math.floor(settings.lastTarget.Humanoid.MaxHealth))
+    else
+        LastTargetLabel:Set("Last Target: None")
+        HealthLabel:Set("Target Health: N/A")
+    end
+end
+
+-- Add debug update loop
+local debugUpdateConnection = RunService.Heartbeat:Connect(function()
+    if not settings.isRunning then return end
+    
+    -- Update debug info every second
+    if tick() % 1 < 0.1 then
+        updateDebugInfo()
+    end
+end)
+
+-- Create test button
+local TestTeleportButton = DebugTab:CreateButton({
+    Name = "Test Teleport",
+    Callback = function()
+        local enemy = findTargetEnemy()
+        if enemy then
+            notify("Test", "Teleporting to " .. enemy.Name, 2)
+            smartTeleport(enemy.HumanoidRootPart.CFrame)
+        else
+            notify("Test", "No target found", 2)
+        end
+    end,
+})
+
+local TestAttackButton = DebugTab:CreateButton({
+    Name = "Test Attack",
+    Callback = function()
+        local enemy = findTargetEnemy()
+        if enemy then
+            notify("Test", "Attacking " .. enemy.Name, 2)
+            attackEnemy(enemy)
+        else
+            notify("Test", "No target found", 2)
+        end
+    end,
+})
+
 -- Run the script
 if safeStart() then
     initialize()
+    notify("Ready", "Script initialized and ready to use!", 3)
 else
     wait(5)
     Rayfield:Destroy()
@@ -575,7 +661,7 @@ local CreditsTab = Window:CreateTab("Credits", 4483362458)
 
 CreditsTab:CreateLabel("Auza Hub - Advanced Combat Script")
 CreditsTab:CreateLabel("Created by Auza Team")
-CreditsTab:CreateLabel("Version 1.0.0")
+CreditsTab:CreateLabel("Version 1.1.0")
 
 CreditsTab:CreateButton({
     Name = "Copy Discord Invite",
